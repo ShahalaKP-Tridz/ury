@@ -26,7 +26,7 @@ app_include_js = [
     "/assets/ury/js/quick_entry.js",
     "/assets/ury/js/pos_print.js",
     "/assets/ury/js/restrict_qty_edit_pos.js",
-    "/assets/ury/js/ury_pos_kot.js"
+    "/assets/ury/js/ury_pos_kot.js",
 ]
 
 # include js, css files in header of web template
@@ -45,6 +45,7 @@ page_js = {"point-of-sale": ["public/js/pos_extend.js"]}
 
 # include js in doctype views
 # doctype_js = {"POS Invoive" : "public/js/pos_print.js"}
+
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -82,6 +83,44 @@ website_route_rules = [
 # 	"methods": "ury.utils.jinja_methods",
 # 	"filters": "ury.utils.jinja_filters"
 # }
+
+
+setup_wizard_requires = [
+    "assets/erpnext/js/setup_wizard.js",
+    "assets/ury/js/setup_wizard.js",
+]
+
+setup_wizard_complete = "ury.setup.setup_wizard.setup_ury_or_erpnext_demo"
+
+ury_demo_master_doctypes = [
+    "Item Group",
+    "Item",
+    "Item Price",
+    "Customer Group",
+    "Customer",
+    "Gender",
+    "User",
+    "Employee",
+    "BOM",
+    "Supplier Group",
+    "Supplier",
+    "Branch",
+    "URY Menu Course",
+    "URY Menu",
+    "URY Room",
+    "URY Restaurant",
+    "URY Table",
+    "Product Bundle",
+    "URY Production Unit",
+    "URY Report Settings",
+    "POS Profile"
+]
+
+ury_demo_transaction_doctypes = [
+    "Production Plan",
+    "Material Request",
+    "Purchase Order"    
+]
 
 # Installation
 # ------------

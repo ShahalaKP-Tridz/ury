@@ -1,0 +1,57 @@
+[
+    {
+        "doctype": "Payment Entry",
+        "payment_type": "Receive",
+        "party_type": "Customer",
+        "party": "Palmer Productions Ltd.",
+        "paid_amount": 67000,
+        "received_amount": 67000,
+        "reference_no": "#ref0001",
+        "source_exchange_rate": 1,
+        "target_exchange_rate": 1
+    },
+    {
+        "doctype": "Payment Entry",
+        "payment_type": "Receive",
+        "party_type": "Customer",
+        "party": "Grant Plastics Ltd.",
+        "paid_amount": 500000,
+        "received_amount": 500000,
+        "reference_no": "#ref0001",
+        "source_exchange_rate": 1,
+        "target_exchange_rate": 1
+    },
+    {
+        "doctype": "Payment Entry",
+        "payment_type": "Receive",
+        "party_type": "Customer",
+        "party": "West View Software Ltd.",
+        "paid_amount": 300000,
+        "received_amount": 30000,
+        "reference_no": "#ref0001",
+        "source_exchange_rate": 1,
+        "target_exchange_rate": 1
+    },
+    {
+        "doctype": "Payment Entry",
+        "payment_type": "Pay",
+        "party_type": "Supplier",
+        "party": "MA Inc.",
+        "paid_amount": 85000,
+        "received_amount": 85000,
+        "reference_no": "#ref0005",
+        "source_exchange_rate": 1,
+        "target_exchange_rate": 1
+    },
+    {
+        "doctype": "Payment Entry",
+        "payment_type": "Pay",
+        "party_type": "Supplier",
+        "party": "Zuckerman Security Ltd.",
+        "paid_amount": 100000,
+        "received_amount": 100000,
+        "reference_no": "#ref0006",
+        "source_exchange_rate": 1,
+        "target_exchange_rate": 1
+    }
+]

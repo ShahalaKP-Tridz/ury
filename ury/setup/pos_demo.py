@@ -1,0 +1,138 @@
+from random import choice, randint
+import frappe
+from frappe.utils import nowdate, get_datetime
+
+
+
+def generate_pos_demo():
+    company = frappe.db.get_single_value("Global Defaults", "demo_company")
+    pos_profile = get_pos_profile(company)
+    warehouse = get_pos_warehouse(pos_profile)
+    add_opening_stock(company, warehouse)
+
+    opening1 = create_pos_opening(company)
+    create_pos_invoices(company, opening1, count=5)
+    create_pos_closing(company, opening1)
+
+    opening2 = create_pos_opening(company)
+    create_pos_invoices(company, opening2, count=3)
+
+def get_pos_profile(company):
+    profiles = frappe.get_all(
+        "POS Profile", filters={"company": company}, pluck="name"
+    )
+    return choice(profiles)
+
+def get_pos_warehouse(pos_profile):
+    return frappe.db.get_value("POS Profile", pos_profile, "warehouse")
+
+def get_cashier_user():
+    return "cashier@ury.com"
+
+def get_customer():
+    customers = frappe.get_all("Customer", pluck="name")
+    return choice(customers)
+
+
+def get_items():
+    return frappe.get_all(
+        "Item",
+        filters={"is_stock_item": 1},
+        fields=["name", "stock_uom"]
+    )
+
+def add_opening_stock(company, warehouse):
+    items = ["CKN", "ONN", "BG", "CG", "MR", "BR", "WNG", "MOM", "GR"]
+
+    for item in items:
+        se = frappe.get_doc({
+            "doctype": "Stock Entry",
+            "stock_entry_type": "Material Receipt",
+            "company": company,
+            "to_warehouse": warehouse,
+            "items": [
+                {
+                    "item_code": item,
+                    "qty": 100,
+                    "basic_rate": 50
+                }
+            ]
+        })
+
+        se.insert(ignore_permissions=True)
+        se.submit()
+
+def create_pos_opening(company):
+    pos_profile = get_pos_profile(company)
+    cashier = get_cashier_user() 
+    opening = frappe.get_doc({
+        "doctype": "POS Opening Entry",
+        "company": company,
+        "pos_profile": pos_profile,
+        "user": cashier,
+        "period_start_date": nowdate(),
+        "posting_date": nowdate(),
+        "balance_details": [
+            {
+                "mode_of_payment": "Cash",
+                "opening_amount": 1000
+            }
+        ]
+    })
+    opening.insert(ignore_permissions=True)
+    opening.submit()
+    return opening
+
+def create_pos_invoices(company, opening, count=5):
+
+    items = get_items()
+    pos_profile = opening.pos_profile
+    warehouse = frappe.db.get_value("POS Profile", pos_profile, "warehouse")
+    for i in range(count):
+
+        item = choice(items)
+
+        invoice = frappe.get_doc({
+            "doctype": "POS Invoice",
+            "company": company,
+            "customer": get_customer(),
+            "pos_profile": pos_profile,
+            "is_pos": 1,
+            "posting_date": nowdate(),
+            "items": [
+                {
+                    "item_code": item.name,
+                    "qty": randint(1, 5),
+                    "warehouse": warehouse,
+                    "rate": randint(50, 200)
+                }
+            ]
+        })
+
+        
+        invoice.append("payments", {
+            "mode_of_payment": "Cash",
+            "amount": 1
+        })
+        invoice.insert(ignore_permissions=True)
+        invoice.payments[0].amount = invoice.grand_total
+        invoice.paid_amount = invoice.grand_total
+        invoice.creation = get_datetime(invoice.creation)
+        invoice.submit()
+
+def create_pos_closing(company, opening):
+    cashier = get_cashier_user()
+    closing = frappe.get_doc({
+        "doctype": "POS Closing Entry",
+        "company": company,
+        "pos_profile": opening.pos_profile,
+        "user": cashier,
+        "pos_opening_entry": opening.name,
+        "period_end_date": nowdate(),
+        "posting_date": nowdate(),
+    })
+
+    closing.insert(ignore_permissions=True)
+    closing.submit()
+
+    return closing
