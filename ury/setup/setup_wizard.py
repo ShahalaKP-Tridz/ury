@@ -25,6 +25,7 @@ def setup_ury_or_erpnext_demo(args):
         # 🔥 VERY IMPORTANT: switch defaults
         frappe.defaults.set_user_default("Company", company)
         frappe.db.set_default("company", company)
+        frappe.db.set_default("demo_data_type", "ury")
 
         from ury.setup.demo import setup_ury_demo_data
         setup_ury_demo_data(company)
@@ -33,6 +34,7 @@ def setup_ury_or_erpnext_demo(args):
 
     
     if setup_demo:
+        frappe.db.set_default("demo_data_type", "erpnext")
         from erpnext.setup.demo import setup_demo_data
         setup_demo_data()
         return

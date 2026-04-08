@@ -1,8 +1,7 @@
 from random import choice, randint
 import frappe
 from frappe.utils import nowdate, get_datetime
-
-
+from erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry import make_closing_entry_from_opening
 
 def generate_pos_demo():
     company = frappe.db.get_single_value("Global Defaults", "demo_company")
@@ -95,6 +94,7 @@ def create_pos_invoices(company, opening, count=5):
         invoice = frappe.get_doc({
             "doctype": "POS Invoice",
             "company": company,
+            "owner": opening.user,
             "customer": get_customer(),
             "pos_profile": pos_profile,
             "is_pos": 1,
@@ -115,24 +115,18 @@ def create_pos_invoices(company, opening, count=5):
             "amount": 1
         })
         invoice.insert(ignore_permissions=True)
+        
         invoice.payments[0].amount = invoice.grand_total
         invoice.paid_amount = invoice.grand_total
         invoice.creation = get_datetime(invoice.creation)
         invoice.submit()
+        
+        # Frappe insert() forces owner = session.user and save/submit writes it. Unconditionally override it AFTER.
+        frappe.db.set_value("POS Invoice", invoice.name, "owner", opening.user, update_modified=False)
 
 def create_pos_closing(company, opening):
-    cashier = get_cashier_user()
-    closing = frappe.get_doc({
-        "doctype": "POS Closing Entry",
-        "company": company,
-        "pos_profile": opening.pos_profile,
-        "user": cashier,
-        "pos_opening_entry": opening.name,
-        "period_end_date": nowdate(),
-        "posting_date": nowdate(),
-    })
-
+    closing = make_closing_entry_from_opening(opening)
+    closing.posting_date = nowdate()
     closing.insert(ignore_permissions=True)
     closing.submit()
-
     return closing

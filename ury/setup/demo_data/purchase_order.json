@@ -1,7 +1,7 @@
 [
     {
         "conversion_rate": 1.0,
-        "supplier": "Zuckerman Security Ltd.",
+        "supplier": "Zuckerman Foodie Ltd.",
         "doctype": "Purchase Order",
         "update_stock": 1,
         "disable_rounded_total": 1,
@@ -55,7 +55,7 @@
     },
     {
         "conversion_rate": 1.0,
-        "supplier": "Zuckerman Security Ltd.",
+        "supplier": "Zuckerman Foodie Ltd.",
         "doctype": "Purchase Order",
         "update_stock": 1,
         "disable_rounded_total": 1,
@@ -107,7 +107,7 @@
     },
     {
         "conversion_rate": 1.0,
-        "supplier": "Zuckerman Security Ltd.",
+        "supplier": "Zuckerman Foodie Ltd.",
         "doctype": "Purchase Order",
         "update_stock": 1,
         "disable_rounded_total": 1,
@@ -158,7 +158,7 @@
     },
     {
         "conversion_rate": 1.0,
-        "supplier": "Zuckerman Security Ltd.",
+        "supplier": "Zuckerman Foodie Ltd.",
         "doctype": "Purchase Order",
         "update_stock": 1,
         "disable_rounded_total": 1,

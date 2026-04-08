@@ -1,7 +1,7 @@
 [
     {
         "conversion_rate": 1.0,
-        "customer": "Grant Plastics Ltd.",
+        "customer": "Grant Foodie Ltd.",
         "doctype": "Sales Order",
         "order_type": "Sales",
         "update_stock": 1,
@@ -19,7 +19,7 @@
     },
     {
         "conversion_rate": 1.0,
-        "customer": "West View Software Ltd.",
+        "customer": "West View Foodie Ltd.",
         "doctype": "Sales Order",
         "order_type": "Sales",
         "update_stock": 1,
@@ -45,7 +45,7 @@
     },
     {
         "conversion_rate": 1.0,
-        "customer": "West View Software Ltd.",
+        "customer": "West View Foodie Ltd.",
         "doctype": "Sales Order",
         "order_type": "Sales",
         "update_stock": 1,
@@ -79,7 +79,7 @@
     },
     {
         "conversion_rate": 1.0,
-        "customer": "Palmer Productions Ltd.",
+        "customer": "Palmer Foodie Ltd.",
         "doctype": "Sales Order",
         "order_type": "Sales",
         "update_stock": 1,
@@ -97,7 +97,7 @@
     },
     {
         "conversion_rate": 1.0,
-        "customer": "Grant Plastics Ltd.",
+        "customer": "Grant Foodie Ltd.",
         "doctype": "Sales Order",
         "order_type": "Sales",
         "update_stock": 1,

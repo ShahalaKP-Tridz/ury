@@ -6,15 +6,17 @@
         "accounts": [
             {
                 "party_type": "Customer",
-                "party": "Palmer Productions Ltd.",
+                "party": "Palmer Foodie Ltd.",
                 "credit_in_account_currency": 40000.0,
                 "debit_in_account_currency": 0.0,
+                "account": "__RECEIVABLE_ACCOUNT__",
                 "doctype": "Journal Entry Account",
                 "parentfield": "accounts"
             },
             {
                 "credit_in_account_currency": 0.0,
                 "debit_in_account_currency": 40000.0,
+                "account": "__BANK_ACCOUNT__",
                 "doctype": "Journal Entry Account",
                 "parentfield": "accounts"
             }

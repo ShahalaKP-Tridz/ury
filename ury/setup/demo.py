@@ -5,6 +5,8 @@ from random import randint
 import frappe
 from frappe import _, scrub
 from frappe.utils import add_days, getdate
+from frappe.utils.telemetry import capture
+from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry as wo_make_stock_entry
 
 
 
@@ -15,6 +17,7 @@ from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
 from erpnext.stock.doctype.material_request.material_request import make_purchase_order
 from erpnext.stock.doctype.material_request.material_request import make_stock_entry
 from ury.setup.pos_demo import generate_pos_demo
+from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
 
 
 def setup_ury_demo_data(company):
@@ -72,6 +75,7 @@ def process_transactions(company):
             for item in json.loads(data):
                 replace_placeholders(item, company)
                 create_transaction(item, company, start_date)
+    convert_production_plan_to_work_orders()
     convert_material_requests()
     convert_order_to_invoices()
     frappe.db.set_single_value("Stock Settings","allow_negative_stock", 0)
@@ -89,6 +93,8 @@ def create_transaction(doctype, company, start_date):
         "company": company,
         "set_posting_time": 1,
         "transaction_date": posting_date,
+        "posting_date": posting_date,
+        "reference_date": posting_date,
         "schedule_date": posting_date,
         "delivery_date": posting_date,
         "set_warehouse": warehouse
@@ -111,14 +117,43 @@ def create_transaction(doctype, company, start_date):
 
 def convert_order_to_invoices():
     for document in ["Purchase Order", "Sales Order"]:
-        # Keep some orders intentionally unbilled/unpaid
-        for i, order in enumerate(
-            frappe.db.get_all(
-                document, filters={"docstatus": 1}, fields=["name", "transaction_date"], limit=8
-            )
-        ):
+        # Keep some sales orders intentionally unbilled/unpaid, but process all purchase orders
+        kwargs = {"filters": {"docstatus": 1}, "fields": ["name", "transaction_date"]}
+        if document == "Sales Order":
+            kwargs["limit"] = 8
+            
+        for i, order in enumerate(frappe.db.get_all(document, **kwargs)):
             if document == "Purchase Order":
-                invoice = make_purchase_invoice(order.name)
+                # Skip already processed
+                if frappe.db.exists("Purchase Receipt Item", {"purchase_order": order.name}) \
+                or frappe.db.exists("Purchase Invoice Item", {"purchase_order": order.name}):
+                    continue
+
+                mode = randint(1, 3)
+
+                # 🟢 CASE 1: Only Purchase Receipt
+                if mode == 1:
+                    pr = make_purchase_receipt(order.name)
+                    pr.set_posting_time = 1
+                    pr.posting_date = order.transaction_date
+                    pr.insert(ignore_permissions=True)
+                    pr.submit()
+                    continue
+
+                # 🔵 CASE 2: Direct Purchase Invoice (no PR)
+                elif mode == 2:
+                    invoice = make_purchase_invoice(order.name)
+
+                # 🟣 CASE 3: PR → PI flow
+                else:
+                    pr = make_purchase_receipt(order.name)
+                    pr.set_posting_time = 1
+                    pr.posting_date = order.transaction_date
+                    pr.insert(ignore_permissions=True)
+                    pr.submit()
+
+                    # IMPORTANT: create invoice from PO, not PR
+                    invoice = make_purchase_invoice(order.name)
             elif document == "Sales Order":
                 invoice = make_sales_invoice(order.name)
             invoice.set_posting_time = 1
@@ -129,7 +164,14 @@ def convert_order_to_invoices():
             if invoice.get("payment_schedule"):
                 invoice.payment_schedule[0].due_date = order.transaction_date
 
-            invoice.update_stock = 1
+            if document == "Sales Order" and i % 3 == 0:
+                invoice.update_stock = 1
+            else:
+                invoice.update_stock = 0
+            # Leave some invoices fully billed to allow for Completed status
+            if i % 3 != 0:
+                for item in invoice.items:
+                    item.qty = item.qty * 0.7
             invoice.submit()
             
             if i % 2 != 0:
@@ -151,16 +193,15 @@ def convert_order_to_invoices():
                 payment.received_amount = amount
 
                 payment.set_amounts()
-                print("Payment Type:", payment.payment_type)
-                print("Paid Amount:", payment.paid_amount)
-                print("Received Amount:", payment.received_amount)
-                print("Allocated:", payment.references[0].allocated_amount)
                 payment.insert(ignore_permissions=True)
                 payment.submit()
 
 
 def get_random_date(start_date, start_range, end_range):
-    return add_days(start_date, randint(start_range, end_range))
+    random_date = add_days(start_date, randint(start_range, end_range))
+    if getdate(random_date) > getdate():
+        return getdate()
+    return random_date
 
 
 def read_data_file_using_hooks(doctype):
@@ -183,6 +224,8 @@ def convert_material_requests():
             po.supplier = get_supplier()
             for item in po.items:
                 item.schedule_date = po.transaction_date
+                if not item.rate:
+                    item.rate = 100
             po.insert(ignore_permissions=True)
             po.submit()
         elif mr.material_request_type == "Material Transfer":
@@ -190,6 +233,37 @@ def convert_material_requests():
             se = make_stock_entry(mr.name)
             se.insert(ignore_permissions=True)
             se.submit()
+
+def convert_production_plan_to_work_orders():
+    production_plans = frappe.db.get_all(
+        "Production Plan",
+        filters={"docstatus": 1},
+        fields=["name", "company"]
+    )
+    for i, plan in enumerate(production_plans):
+        plan_doc = frappe.get_doc("Production Plan", plan.name)
+        for idx, item in enumerate(plan_doc.po_items):
+            wo = frappe.new_doc("Work Order")
+            wo.production_item = item.item_code
+            wo.bom_no = item.bom_no
+            wo.qty = item.planned_qty
+            wo.company = plan.company
+            wo.wip_warehouse = get_warehouse(plan.company)
+            wo.fg_warehouse = get_warehouse(plan.company)
+            wo.production_plan = plan.name
+            wo.production_plan_item = item.name
+            wo.planned_start_date = getattr(plan_doc, "posting_date", None) or getattr(plan_doc, "transaction_date", None) or getdate()
+            wo.insert(ignore_permissions=True)
+            wo.submit()
+
+            if i == 0 and idx == 0:
+                se_dict = wo_make_stock_entry(wo.name, "Material Transfer for Manufacture", wo.qty)
+                se = frappe.get_doc(se_dict)
+                for se_item in se.items:
+                    # Provide a source warehouse that guarantees no validation error.
+                    se_item.s_warehouse = get_warehouse(plan.company)
+                se.insert(ignore_permissions=True)
+                se.submit()
 
 def get_two_warehouses(company):
     w1 = get_warehouse(company)
@@ -242,11 +316,36 @@ def get_cost_center(company):
         "name"
     )
 
+def get_receivable_account(company):
+    acc = frappe.db.get_value("Company", company, "default_receivable_account")
+    if not acc:
+        acc = frappe.db.get_value("Account", {"company": company, "account_type": "Receivable", "is_group": 0}, "name")
+    return acc
+
+def get_payable_account(company):
+    acc = frappe.db.get_value("Company", company, "default_payable_account")
+    if not acc:
+        acc = frappe.db.get_value("Account", {"company": company, "account_type": "Payable", "is_group": 0}, "name")
+    return acc
+
+def get_bank_account(company):
+    acc = frappe.db.get_value("Company", company, "default_bank_account")
+    if not acc:
+        acc = frappe.db.get_value("Account", {"company": company, "account_type": "Bank", "is_group": 0}, "name")
+    return acc
+
+
 def replace_placeholders(data, company):
     if isinstance(data, dict):
         for key, value in data.items():
             if value == "__CASH_ACCOUNT__":
                 data[key] = get_cash_account(company)
+            elif value == "__BANK_ACCOUNT__":
+                data[key] = get_bank_account(company)
+            elif value == "__RECEIVABLE_ACCOUNT__":
+                data[key] = get_receivable_account(company)
+            elif value == "__PAYABLE_ACCOUNT__":
+                data[key] = get_payable_account(company)
             elif value == "__WRITE_OFF_ACCOUNT__":
                 data[key] = get_write_off_account(company)
             elif value == "__COST_CENTER__":
@@ -270,3 +369,88 @@ def get_warehouse(company):
 def get_supplier():
     suppliers = frappe.db.get_all("Supplier", pluck="name")
     return suppliers[randint(0, len(suppliers) - 1)]
+
+@frappe.whitelist()
+def clear_demo_data():
+
+    frappe.only_for("System Manager")
+    
+    demo_data_type = frappe.db.get_default("demo_data_type")
+    if demo_data_type == "erpnext":
+        frappe.db.set_default("demo_data_type", "")
+        from erpnext.setup.demo import clear_demo_data as erpnext_clear_demo_data
+        return erpnext_clear_demo_data()
+
+    capture("demo_data_erased", "ury")
+    try:
+        company = frappe.db.get_single_value("Global Defaults", "demo_company")
+        if not company:
+            frappe.throw(_("No demo company found in Global Defaults"))
+        create_transaction_deletion_record(company)
+        clear_masters()
+        delete_company(company)
+        default_company = frappe.db.get_single_value("Global Defaults", "default_company")
+        if default_company == company:
+            frappe.db.set_default("company", "")
+        else:
+            frappe.db.set_default("company", default_company)
+        frappe.db.set_default("demo_data_type", "")
+    except Exception:
+        frappe.db.rollback()
+        frappe.log_error("Failed to erase demo data")
+        frappe.throw(
+            _("Failed to erase demo data, please delete the demo company manually."),
+            title=_("Could Not Delete Demo Data"),
+        )
+
+
+def create_transaction_deletion_record(company):
+    transaction_deletion_record = frappe.new_doc("Transaction Deletion Record")
+    transaction_deletion_record.company = company
+    transaction_deletion_record.process_in_single_transaction = True
+    transaction_deletion_record.save(ignore_permissions=True)
+    transaction_deletion_record.submit()
+    transaction_deletion_record.start_deletion_tasks()
+
+
+def clear_masters():
+    # Explicitly nuke dynamic dependencies to evade LinkExistsError blocks before hitting strictly ordered JSON
+    company = frappe.db.get_single_value("Global Defaults", "demo_company")
+    for pos_profile in frappe.get_all("POS Profile", filters={"company": company}, pluck="name"):
+        frappe.delete_doc("POS Profile", pos_profile, force=1, ignore_permissions=True)
+        
+    for price_list in frappe.get_all("Price List", filters={"price_list_name": ["like", "%Demo%"]}, pluck="name"):
+        frappe.delete_doc("Price List", price_list, force=1, ignore_permissions=True)
+
+    for doctype in frappe.get_hooks("ury_demo_master_doctypes")[::-1]:
+        data = read_data_file_using_hooks(doctype)
+        if data:
+            for item in json.loads(data):
+                clear_demo_record(item)
+
+
+def clear_demo_record(document):
+    document_type = document.get("doctype")
+    del document["doctype"]
+
+    valid_columns = frappe.get_meta(document_type).get_valid_columns()
+
+    filters = document
+    for key in list(filters):
+        if key not in valid_columns:
+            filters.pop(key, None)
+
+    # Use frappe.db.get_value to silently check existence instead of getting noisy UI msgprint dumps
+    docname = frappe.db.get_value(document_type, filters, "name")
+    if docname:
+        docstatus = frappe.db.get_value(document_type, docname, "docstatus")
+        if docstatus == 1:
+            frappe.db.set_value(document_type, docname, "docstatus", 2)
+        frappe.delete_doc(document_type, docname, force=1, ignore_permissions=True)
+
+
+def delete_company(company):
+    frappe.db.set_single_value("Global Defaults", "demo_company", "")
+    for user_perm in frappe.db.get_all("User Permission", filters={"allow": "Company", "for_value": company}, pluck="name"):
+        frappe.delete_doc("User Permission", user_perm, force=1, ignore_permissions=True)
+    frappe.delete_doc("Company", company, force=1, ignore_permissions=True)
