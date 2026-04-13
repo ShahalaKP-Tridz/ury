@@ -33,12 +33,17 @@ export const SetupLayout = ({
         
         {!hideHeader && (
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-primary rounded-[28px] shadow-2xl shadow-primary/20 mb-8 text-primary-foreground font-black text-4xl transform transition-transform hover:scale-105">
-              U
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-white border border-border rounded-[28px] shadow-2xl shadow-primary/5 mb-8 transform transition-transform hover:scale-105 overflow-hidden">
+              <img 
+                src="/assets/ury/pos/ury_pos.png" 
+                alt="URY Logo" 
+                className="w-full h-full object-contain p-3"
+              />
             </div>
             <h1 className="text-5xl font-black text-foreground tracking-tight mb-4">
               {title}
             </h1>
+
             <p className="text-muted-foreground text-xl max-w-md mx-auto font-medium leading-relaxed">
               {subtitle}
             </p>

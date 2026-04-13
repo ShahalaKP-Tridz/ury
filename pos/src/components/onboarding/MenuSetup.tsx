@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { SetupCard, PrimaryButton, Input } from './Shared';
-import { Plus, Trash2, ArrowRight, ArrowLeft, Upload, FileJson } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, ArrowLeft, Upload } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 export const MenuSetup = ({ onNext, onBack }: { onNext: (data: any) => void, onBack: () => void }) => {

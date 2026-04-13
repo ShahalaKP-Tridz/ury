@@ -1,5 +1,4 @@
-import React from 'react';
-import { ArrowRight, Sparkles, LayoutDashboard, Zap, Shield } from 'lucide-react';
+import { ArrowRight, LayoutDashboard, Shield, Zap, Sparkles } from 'lucide-react';
 import { Button } from '../ui/button';
 
 export const WelcomeScreen = ({ onNext }: { onNext: () => void }) => {
@@ -10,9 +9,14 @@ export const WelcomeScreen = ({ onNext }: { onNext: () => void }) => {
       
       <div className="flex flex-col items-center text-center relative z-10">
         {/* Logo Icon */}
-        <div className="w-20 h-20 bg-primary rounded-[22px] flex items-center justify-center text-primary-foreground text-[42px] font-black mb-10 shadow-xl shadow-primary/20 transform transition-transform group-hover:rotate-3">
-          U
+        <div className="w-20 h-20 bg-white rounded-[22px] flex items-center justify-center mb-10 shadow-xl shadow-primary/10 transform transition-transform group-hover:rotate-3 overflow-hidden border border-border">
+          <img 
+            src="/assets/ury/pos/ury_pos.png" 
+            alt="URY Logo" 
+            className="w-full h-full object-contain p-3"
+          />
         </div>
+
 
         <h2 className="text-4xl font-black text-foreground mb-5 tracking-tight">
           Welcome to <span className="text-primary">URY</span>
