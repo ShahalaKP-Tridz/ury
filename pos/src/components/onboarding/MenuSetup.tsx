@@ -11,6 +11,7 @@ export const MenuSetup = ({ onNext, onBack }: { onNext: (data: any) => void, onB
     { name: '', price: '' }
   ]);
   const [taxType, setTaxType] = useState('inclusive');
+  const [touched, setTouched] = useState(false);
 
   const addItem = () => setItems([...items, { name: '', price: '' }]);
   const removeItem = (index: number) => setItems(items.filter((_, i) => i !== index));
@@ -52,6 +53,30 @@ export const MenuSetup = ({ onNext, onBack }: { onNext: (data: any) => void, onB
     reader.readAsText(file);
   };
 
+  const validateItems = () => {
+    // Check if any partially filled items exist
+    const invalidItems = items.filter(item => 
+      (item.name && !item.price) || (!item.name && item.price)
+    );
+    return invalidItems.length === 0;
+  };
+
+  const handleNext = () => {
+    setTouched(true);
+    if (!validateItems()) {
+      toast.error("Please complete all items or remove empty rows");
+      return;
+    }
+
+    const filteredItems = items.filter(item => item.name && item.price);
+    if (filteredItems.length === 0) {
+      toast.warning("Add at least one item or click Skip");
+      return;
+    }
+
+    onNext({ items: filteredItems, taxType });
+  };
+
   return (
     <div className="max-w-3xl mx-auto">
       <input 
@@ -72,39 +97,43 @@ export const MenuSetup = ({ onNext, onBack }: { onNext: (data: any) => void, onB
           </button>
         </div>
 
-
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4 px-2">
             <h4 className="font-bold text-foreground">Menu Items</h4>
-            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{items.length} Items</span>
+            <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">{items.length} Items</span>
           </div>
           
           <div className="space-y-3">
-            {items.map((item, index) => (
-              <div key={index} className="flex gap-4 items-center animate-in fade-in slide-in-from-left-2 duration-300">
-                <div className="flex-1">
-                  <Input 
-                    placeholder="Item Name (e.g. Cheese Pizza)" 
-                    value={item.name}
-                    onChange={(e) => updateItem(index, 'name', e.target.value)}
-                  />
+            {items.map((item, index) => {
+              const isInvalid = touched && ((item.name && !item.price) || (!item.name && item.price));
+              return (
+                <div key={index} className="flex gap-4 items-center animate-in fade-in slide-in-from-left-2 duration-300">
+                  <div className="flex-1">
+                    <Input 
+                      placeholder="Item Name (e.g. Cheese Pizza)" 
+                      value={item.name}
+                      className={touched && !item.name && item.price ? "border-destructive focus:ring-destructive/20" : ""}
+                      onChange={(e) => updateItem(index, 'name', e.target.value)}
+                    />
+                  </div>
+                  <div className="w-32">
+                    <Input 
+                      type="number"
+                      placeholder="Price" 
+                      value={item.price}
+                      className={touched && item.name && !item.price ? "border-destructive focus:ring-destructive/20" : ""}
+                      onChange={(e) => updateItem(index, 'price', e.target.value)}
+                    />
+                  </div>
+                  <button 
+                    onClick={() => removeItem(index)}
+                    className="p-2.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                  >
+                    <Trash2 size={20} />
+                  </button>
                 </div>
-                <div className="w-32">
-                  <Input 
-                    type="number"
-                    placeholder="Price" 
-                    value={item.price}
-                    onChange={(e) => updateItem(index, 'price', e.target.value)}
-                  />
-                </div>
-                <button 
-                  onClick={() => removeItem(index)}
-                  className="p-2.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
-                >
-                  <Trash2 size={20} />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
           
           <button 
@@ -156,7 +185,7 @@ export const MenuSetup = ({ onNext, onBack }: { onNext: (data: any) => void, onB
             >
               Skip
             </button>
-            <PrimaryButton onClick={() => onNext({ items, taxType })}>
+            <PrimaryButton onClick={handleNext}>
               Next <ArrowRight size={18} />
             </PrimaryButton>
           </div>

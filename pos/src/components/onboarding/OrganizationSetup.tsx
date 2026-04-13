@@ -15,6 +15,22 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
     generateDemoData: true
   });
 
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const validate = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.companyName) errors.companyName = 'Company name is required';
+    if (!formData.adminUsername) errors.adminUsername = 'Username is required';
+    if (!formData.email) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Invalid email format';
+    }
+    return errors;
+  };
+
+  const errors = validate();
+
   const handleCompanyNameChange = (val: string) => {
     setFormData({
       ...formData,
@@ -23,17 +39,19 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
     });
   };
 
-  const isFormValid = formData.companyName && formData.adminUsername && formData.email;
+  const isFormValid = Object.keys(validate()).length === 0;
 
   return (
     <div className="max-w-2xl mx-auto">
       <SetupCard>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <FormField label="Company Name" required>
+          <FormField label="Company Name" required error={touched.companyName ? errors.companyName : undefined}>
             <Input
               placeholder="e.g. Tasty Trails Restaurant"
               value={formData.companyName}
+              className={touched.companyName && errors.companyName ? "border-destructive focus:ring-destructive/20" : ""}
               onChange={(e) => handleCompanyNameChange(e.target.value)}
+              onBlur={() => setTouched({ ...touched, companyName: true })}
             />
           </FormField>
 
@@ -50,7 +68,6 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
           </FormField>
 
           <FormField label="Abbreviation">
-
             <Input
               placeholder="URY"
               value={formData.abbreviation}
@@ -83,24 +100,27 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
           </FormField>
 
           <div className="md:col-span-2 pt-4 border-t border-border">
-
-            <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4">Admin Account</h4>
+            <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4">Admin Account</h4>
           </div>
 
-          <FormField label="Admin Username" required>
+          <FormField label="Admin Username" required error={touched.adminUsername ? errors.adminUsername : undefined}>
             <Input
               placeholder="e.g. administrator"
               value={formData.adminUsername}
+              className={touched.adminUsername && errors.adminUsername ? "border-destructive focus:ring-destructive/20" : ""}
               onChange={(e) => setFormData({ ...formData, adminUsername: e.target.value })}
+              onBlur={() => setTouched({ ...touched, adminUsername: true })}
             />
           </FormField>
 
-          <FormField label="Email Address" required>
+          <FormField label="Email Address" required error={touched.email ? errors.email : undefined}>
             <Input
               type="email"
               placeholder="admin@restaurant.com"
               value={formData.email}
+              className={touched.email && errors.email ? "border-destructive focus:ring-destructive/20" : ""}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onBlur={() => setTouched({ ...touched, email: true })}
             />
           </FormField>
         </div>

@@ -10,7 +10,7 @@ export const ModeSelection = ({ onSelect }: { onSelect: (mode: 'minimal' | 'adva
         className="group cursor-pointer transform hover:-translate-y-2 transition-all duration-300"
       >
         <SetupCard className="h-full flex flex-col items-center border-2 border-transparent hover:border-primary hover:shadow-2xl hover:shadow-primary/10 relative overflow-hidden">
-          <div className="absolute top-4 right-4 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+          <div className="absolute top-4 right-4 bg-primary/10 text-primary text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full">
             Recommended
           </div>
           
