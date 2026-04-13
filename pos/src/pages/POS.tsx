@@ -24,7 +24,7 @@ export default function POS() {
     isMenuInteractionDisabled,
     isInitializing,
   } = usePOSStore();
-  
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -39,9 +39,9 @@ export default function POS() {
 
   const handleItemClick = (item: any) => {
     if (isMenuInteractionDisabled()) return;
-    
+
     clickCountRef.current += 1;
-    
+
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
     }
@@ -59,7 +59,7 @@ export default function POS() {
     }, 250); // 250ms threshold for double click
   };
 
-  const QuickFilterButton = ({ filter, icon: Icon, label }: { 
+  const QuickFilterButton = ({ filter, icon: Icon, label }: {
     filter: 'all' | 'special';
     icon: React.ElementType;
     label: string;
@@ -90,7 +90,7 @@ export default function POS() {
         <div className="text-center">
           <p className="text-xl font-semibold text-red-600 mb-2">Failed to load POS</p>
           <p className="text-gray-600">{error}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
           >
@@ -134,7 +134,7 @@ export default function POS() {
                 isVisible={showSearch}
                 disabled={isMenuInteractionDisabled()}
               /> */}
-              
+
               <QuickFilterButton filter="all" icon={Star} label={t('common.all')} />
               <QuickFilterButton filter="special" icon={TrendingUp} label={t('menu.special_items')} />
             </div>

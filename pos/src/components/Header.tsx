@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { t } from '../i18n';
 import { Link, useLocation } from 'react-router-dom';
-import { 
+import {
   Command,
   User,
   ChevronDown,
   Monitor,
   LogOut,
   RefreshCw,
+  Sparkles
 } from 'lucide-react';
+
 import { Button, Input } from './ui';
 import { useRootStore } from '../store/root-store';
 import { usePOSStore } from '../store/pos-store';
@@ -108,10 +110,10 @@ const Header = () => {
       <div className="flex items-center justify-between h-16 px-6">
         {/* Logo */}
         <div className="flex items-center">
-        <Link to="/" className="flex items-center gap-3">
-            <img 
-              src="/assets/ury/pos/ury_pos.png" 
-              alt="URY POS" 
+          <Link to="/" className="flex items-center gap-3">
+            <img
+              src="/assets/ury/pos/ury_pos.png"
+              alt="URY POS"
               className="h-10 w-auto"
             />
           </Link>
@@ -119,23 +121,31 @@ const Header = () => {
 
         {/* Search Bar */}
         <div className="px-4 py-2 flex-1 flex items-center max-w-2xl mx-8  bg-gray-50 hover:bg-gray-100 border border-input rounded-md">
-            <Input
-              ref={searchInputRef}
-              placeholder={searchPlaceholder}
-              className="h-fit p-0 w-full bg-transparent border-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
-              value={searchValue}
-              onChange={searchOnChange}
-            />
-            <div className="flex items-center gap-2 text-gray-400">
-              <Command className="w-4 h-4" />
-              <span>K</span>
-            </div>
+          <Input
+            ref={searchInputRef}
+            placeholder={searchPlaceholder}
+            className="h-fit p-0 w-full bg-transparent border-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            value={searchValue}
+            onChange={searchOnChange}
+          />
+          <div className="flex items-center gap-2 text-gray-400">
+            <Command className="w-4 h-4" />
+            <span>K</span>
+          </div>
         </div>
 
         {/* Right side actions */}
         <div className="flex items-center gap-4">
+          <Link 
+            to="/setup" 
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors border border-blue-200"
+          >
+            <Sparkles className="w-4 h-4" />
+            Test Setup
+          </Link>
           {/* User menu */}
           <div className="relative" ref={userMenuRef}>
+
             <Button
               onClick={handleUserMenuToggle}
               variant="ghost"

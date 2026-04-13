@@ -119,8 +119,10 @@ interface POSState {
   territories: string[];
   tableOrder: TableOrder | null;
   isInitializing: boolean;
+  needsOnboarding: boolean;
   orderComment: string;
 }
+
 
 interface POSStore extends POSState {
   fetchMenuItems: () => Promise<void>;
@@ -201,25 +203,38 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   currencySymbol: storage.getItem('currencySymbol') || null,
   tableOrder: null,
   isInitializing: true,
+  needsOnboarding: false,
   isUpdatingOrder: false,
   orderId: null,
   orderComment: '',
+
 
   initializeApp: async () => {
     try {
       set({ isInitializing: true, error: null });
       
-      const [profileResult, menuResult, categoriesResult, paymentModesResult] = await Promise.allSettled([
+      const [profileResult, menuResult, categoriesResult, paymentModesResult, setupResult] = await Promise.allSettled([
         get().fetchPosProfile(),
         get().fetchMenuItems(),
         get().fetchCategories(),
-        get().fetchPaymentModes()
+        get().fetchPaymentModes(),
+        window.frappe.call('ury.ury.api.ury_setup.check_setup_status')
       ]);
 
       if (profileResult.status === 'rejected' || 
           menuResult.status === 'rejected' || 
           categoriesResult.status === 'rejected' ||
           paymentModesResult.status === 'rejected') {
+        
+        // If profile/menu failed, but setup might be complete, check setup specifically
+        if (setupResult.status === 'fulfilled') {
+          const setupComplete = (setupResult.value as any).message?.setup_complete;
+          if (!setupComplete) {
+            set({ needsOnboarding: true, isInitializing: false });
+            return;
+          }
+        }
+
         set({ 
           error: 'Failed to initialize app. Please refresh the page.',
           isInitializing: false 
@@ -227,7 +242,12 @@ export const usePOSStore = create<POSStore>((set, get) => ({
         return;
       }
 
+      if (setupResult.status === 'fulfilled') {
+        set({ needsOnboarding: !(setupResult.value as any).message?.setup_complete });
+      }
+
       set({ isInitializing: false });
+
     } catch (error) {
       set({ 
         error: 'Failed to initialize app. Please refresh the page.',
