@@ -20,16 +20,16 @@ export const SetupLayout = ({
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center py-10 px-6 italic-none font-inter selection:bg-primary/20">
       <div className="w-full max-w-4xl relative">
-        {/* Universal Exit Button */}
+        {/* Universal Exit Button - Re-positioned for better accessibility */}
         {onExit && (
           <button 
             onClick={onExit}
-            className="group absolute -left-4 xl:-left-32 top-0 flex items-center gap-3 text-muted-foreground hover:text-primary transition-all duration-300"
+            className="group absolute left-0 top-0 lg:-left-32 flex items-center gap-3 text-muted-foreground hover:text-primary transition-all duration-300 z-50 py-2"
           >
             <div className="w-10 h-10 bg-card shadow-sm border border-border rounded-xl flex items-center justify-center group-hover:border-primary/30 group-hover:shadow-primary/5 transition-all">
               <ChevronLeft size={20} />
             </div>
-            <span className="hidden xl:block text-xs font-black uppercase tracking-widest leading-none opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all">
+            <span className="text-xs font-black uppercase tracking-widest leading-none hidden sm:block">
               Exit Setup
             </span>
           </button>
@@ -37,7 +37,7 @@ export const SetupLayout = ({
         
         {/* Branded Header */}
         {!hideHeader && (
-          <div className="text-center mb-10">
+          <div className="text-center mb-10 pt-12 lg:pt-0">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white border border-border rounded-3xl shadow-2xl shadow-primary/5 mb-8 transform transition-transform hover:scale-105 active:scale-95 overflow-hidden">
               <img 
                 src="/assets/ury/pos/ury_pos.png" 
@@ -45,16 +45,16 @@ export const SetupLayout = ({
                 className="w-full h-full object-contain p-3"
               />
             </div>
-            <h1 className="text-5xl font-black text-foreground tracking-tight mb-4">
+            <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tight mb-4 leading-tight">
               {title}
             </h1>
-            <p className="text-muted-foreground text-xl max-w-lg mx-auto font-medium leading-relaxed mb-10">
+            <p className="text-muted-foreground text-lg md:text-xl max-w-lg mx-auto font-medium leading-relaxed mb-10">
               {subtitle}
             </p>
 
             {/* Integrated Step Progress */}
             {activeStep !== undefined && activeStep > 0 && (
-              <div className="max-w-xl mx-auto mb-4">
+              <div className="max-w-2xl mx-auto mb-4">
                 <StepIndicator activeStep={activeStep} />
               </div>
             )}
@@ -62,7 +62,7 @@ export const SetupLayout = ({
         )}
 
         {/* Dynamic Content Area */}
-        <div className="relative z-10">
+        <div className={`relative z-10 ${hideHeader ? 'pt-16 lg:pt-0' : ''}`}>
           {children}
         </div>
         

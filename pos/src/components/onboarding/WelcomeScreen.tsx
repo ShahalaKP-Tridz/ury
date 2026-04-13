@@ -2,6 +2,10 @@ import { ArrowRight, LayoutDashboard, Shield, Zap } from 'lucide-react';
 import { Button } from '../ui/button';
 
 export const WelcomeScreen = ({ onNext }: { onNext: () => void }) => {
+  const handleQuit = () => {
+    window.location.href = "/app";
+  };
+
   return (
     <div className="bg-card text-card-foreground rounded-3xl border border-border p-8 md:p-14 max-w-3xl mx-auto shadow-2xl shadow-primary/5 relative overflow-hidden group">
       {/* Subtle background decoration */}
@@ -59,12 +63,21 @@ export const WelcomeScreen = ({ onNext }: { onNext: () => void }) => {
             <ArrowRight className="w-5 h-5" />
           </Button>
 
-          <div className="mt-8 flex items-center justify-center gap-6 opacity-60">
-            <span className="flex items-center gap-1.5 text-[0.65rem] font-bold text-muted-foreground uppercase tracking-widest">
-              <Zap className="w-3 h-3 text-yellow-500" />
-              Fast Setup
-            </span>
-            <div className="w-1 h-1 bg-border rounded-full" />
+          <div className="mt-8 flex flex-col items-center gap-4">
+            <div className="flex items-center justify-center gap-6 opacity-60">
+              <span className="flex items-center gap-1.5 text-[0.65rem] font-bold text-muted-foreground uppercase tracking-widest">
+                <Zap className="w-3 h-3 text-yellow-500" />
+                Fast Setup
+              </span>
+              <div className="w-1 h-1 bg-border rounded-full" />
+            </div>
+            
+            <button 
+              onClick={handleQuit}
+              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors py-2"
+            >
+              Back to Frappe Desk
+            </button>
           </div>
         </div>
       </div>
