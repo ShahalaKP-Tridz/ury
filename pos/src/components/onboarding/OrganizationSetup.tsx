@@ -1,64 +1,127 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { SetupCard, PrimaryButton, FormField, Input, Select } from './Shared';
 import { ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { setupOrganization, SetupOrganizationPayload } from '../../lib/onboarding-api';
 import { toast } from 'react-toastify';
 
-export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => void, onBack: () => void }) => {
-  const [formData, setFormData] = useState({
-    companyName: '',
-    abbreviation: '',
-    country: 'India',
-    timezone: 'Asia/Kolkata',
-    taxType: 'GST',
-    currency: 'INR',
-    adminUsername: '',
-    email: '',
-    generateDemoData: true
-  });
+interface OrganizationFormData {
+  companyName: string;
+  abbreviation: string;
+  country: string;
+  timezone: string;
+  taxType: string;
+  currency: string;
+  adminUsername: string;
+  email: string;
+  generateDemoData: boolean;
+}
 
+const INITIAL_FORM: OrganizationFormData = {
+  companyName: '',
+  abbreviation: '',
+  country: 'India',
+  timezone: 'Asia/Kolkata',
+  taxType: 'GST',
+  currency: 'INR',
+  adminUsername: '',
+  email: '',
+  generateDemoData: true,
+};
+
+const TIMEZONE_OPTIONS = [
+  { label: '(GMT+05:30) Asia/Kolkata', value: 'Asia/Kolkata' },
+  { label: '(GMT+04:00) Asia/Dubai', value: 'Asia/Dubai' },
+  { label: '(GMT+00:00) UTC', value: 'UTC' },
+];
+
+const COUNTRY_OPTIONS = [
+  { label: 'India', value: 'India' },
+  { label: 'United Arab Emirates', value: 'United Arab Emirates' },
+  { label: 'United States', value: 'United States' },
+];
+
+const TAX_TYPE_OPTIONS = [
+  { label: 'GST (India)', value: 'GST' },
+  { label: 'VAT', value: 'VAT' },
+];
+
+const CURRENCY_OPTIONS = [
+  { label: 'INR (₹)', value: 'INR' },
+  { label: 'AED (د.إ)', value: 'AED' },
+  { label: 'USD ($)', value: 'USD' },
+];
+
+function validate(data: OrganizationFormData): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const trimmedCompany = data.companyName.trim();
+  const trimmedUser = data.adminUsername.trim();
+  const trimmedEmail = data.email.trim();
+
+  if (!trimmedCompany) {
+    errors.companyName = 'Company name is required';
+  } else if (trimmedCompany.length < 2) {
+    errors.companyName = 'Company name must be at least 2 characters';
+  }
+
+  if (!trimmedUser) {
+    errors.adminUsername = 'Username is required';
+  }
+
+  if (!trimmedEmail) {
+    errors.email = 'Email is required';
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    errors.email = 'Invalid email format';
+  }
+
+  return errors;
+}
+
+function generateAbbreviation(companyName: string): string {
+  return companyName
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 0)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 5);
+}
+
+export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => void; onBack: () => void }) => {
+  const [formData, setFormData] = useState<OrganizationFormData>(INITIAL_FORM);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const validate = () => {
-    const errors: Record<string, string> = {};
-    if (!formData.companyName) errors.companyName = 'Company name is required';
-    if (!formData.adminUsername) errors.adminUsername = 'Username is required';
-    if (!formData.email) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Invalid email format';
-    }
-    return errors;
-  };
+  const errors = validate(formData);
+  const isFormValid = Object.keys(errors).length === 0;
 
-  const errors = validate();
-
-  const handleCompanyNameChange = (val: string) => {
-    setFormData({
-      ...formData,
+  const handleCompanyNameChange = useCallback((val: string) => {
+    setFormData(prev => ({
+      ...prev,
       companyName: val,
-      abbreviation: val.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 5)
-    });
-  };
+      abbreviation: generateAbbreviation(val),
+    }));
+  }, []);
 
-  const isFormValid = Object.keys(validate()).length === 0;
+  const markTouched = useCallback((field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  }, []);
 
   const handleSubmit = async () => {
-    // Touch all fields so validation errors show
+    // Touch all required fields so validation errors show
     setTouched({ companyName: true, adminUsername: true, email: true });
-    if (!isFormValid) return;
+    if (!isFormValid || submitting) return;
 
     setSubmitting(true);
     try {
       const payload: SetupOrganizationPayload = {
-        company_name: formData.companyName,
-        abbr: formData.abbreviation,
+        company_name: formData.companyName.trim(),
+        abbr: formData.abbreviation.trim() || generateAbbreviation(formData.companyName),
         country: formData.country,
         timezone: formData.timezone,
         currency: formData.currency,
-        user_name: formData.adminUsername,
-        email: formData.email,
+        user_name: formData.adminUsername.trim(),
+        email: formData.email.trim().toLowerCase(),
         tax_system: formData.taxType,
         generate_demo_data: formData.generateDemoData,
       };
@@ -66,16 +129,14 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
       const result = await setupOrganization(payload);
       toast.success(result.message);
 
-      // Pass both the raw form data (for downstream steps) and the company name
-      // which the menu step may optionally send back to the backend.
       onNext({
-        company_name: formData.companyName,
-        abbreviation: formData.abbreviation,
-        country: formData.country,
-        timezone: formData.timezone,
-        currency: formData.currency,
-        tax_system: formData.taxType,
-        email: formData.email,
+        company_name: payload.company_name,
+        abbreviation: payload.abbr,
+        country: payload.country,
+        timezone: payload.timezone,
+        currency: payload.currency,
+        tax_system: payload.tax_system,
+        email: payload.email,
       });
     } catch (error: any) {
       toast.error(error.message || 'Organization setup failed');
@@ -94,20 +155,19 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
               value={formData.companyName}
               className={touched.companyName && errors.companyName ? "border-destructive focus:ring-destructive/20" : ""}
               onChange={(e) => handleCompanyNameChange(e.target.value)}
-              onBlur={() => setTouched({ ...touched, companyName: true })}
+              onBlur={() => markTouched('companyName')}
               disabled={submitting}
+              maxLength={140}
+              autoComplete="organization"
             />
           </FormField>
 
           <FormField label="Timezone">
             <Select
-              options={[
-                { label: '(GMT+05:30) Asia/Kolkata', value: 'Asia/Kolkata' },
-                { label: '(GMT+04:00) Asia/Dubai', value: 'Asia/Dubai' },
-                { label: '(GMT+00:00) UTC', value: 'UTC' }
-              ]}
+              options={TIMEZONE_OPTIONS}
               value={formData.timezone}
-              onChange={(val) => setFormData({ ...formData, timezone: val })}
+              onChange={(val) => setFormData(prev => ({ ...prev, timezone: val }))}
+              disabled={submitting}
             />
           </FormField>
 
@@ -115,40 +175,36 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
             <Input
               placeholder="URY"
               value={formData.abbreviation}
-              onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value })}
+              onChange={(e) => setFormData(prev => ({ ...prev, abbreviation: e.target.value.toUpperCase() }))}
               disabled={submitting}
+              maxLength={5}
             />
           </FormField>
 
           <FormField label="Country">
             <Select
-              options={[
-                { label: 'India', value: 'India' },
-                { label: 'United Arab Emirates', value: 'United Arab Emirates' },
-                { label: 'United States', value: 'United States' }
-              ]}
+              options={COUNTRY_OPTIONS}
               value={formData.country}
-              onChange={(val) => setFormData({ ...formData, country: val })}
+              onChange={(val) => setFormData(prev => ({ ...prev, country: val }))}
+              disabled={submitting}
             />
           </FormField>
 
           <FormField label="Tax Type">
             <Select
-              options={[{ label: 'GST (India)', value: 'GST' }, { label: 'VAT', value: 'VAT' }]}
+              options={TAX_TYPE_OPTIONS}
               value={formData.taxType}
-              onChange={(val) => setFormData({ ...formData, taxType: val })}
+              onChange={(val) => setFormData(prev => ({ ...prev, taxType: val }))}
+              disabled={submitting}
             />
           </FormField>
 
           <FormField label="Currency">
             <Select
-              options={[
-                { label: 'INR (₹)', value: 'INR' },
-                { label: 'AED (د.إ)', value: 'AED' },
-                { label: 'USD ($)', value: 'USD' }
-              ]}
+              options={CURRENCY_OPTIONS}
               value={formData.currency}
-              onChange={(val) => setFormData({ ...formData, currency: val })}
+              onChange={(val) => setFormData(prev => ({ ...prev, currency: val }))}
+              disabled={submitting}
             />
           </FormField>
 
@@ -161,9 +217,11 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
               placeholder="e.g. administrator"
               value={formData.adminUsername}
               className={touched.adminUsername && errors.adminUsername ? "border-destructive focus:ring-destructive/20" : ""}
-              onChange={(e) => setFormData({ ...formData, adminUsername: e.target.value })}
-              onBlur={() => setTouched({ ...touched, adminUsername: true })}
+              onChange={(e) => setFormData(prev => ({ ...prev, adminUsername: e.target.value }))}
+              onBlur={() => markTouched('adminUsername')}
               disabled={submitting}
+              maxLength={140}
+              autoComplete="username"
             />
           </FormField>
 
@@ -173,9 +231,11 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
               placeholder="admin@restaurant.com"
               value={formData.email}
               className={touched.email && errors.email ? "border-destructive focus:ring-destructive/20" : ""}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              onBlur={() => setTouched({ ...touched, email: true })}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              onBlur={() => markTouched('email')}
               disabled={submitting}
+              maxLength={254}
+              autoComplete="email"
             />
           </FormField>
         </div>
@@ -186,7 +246,7 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
             id="demoData"
             className="w-5 h-5 rounded-lg border-input text-primary focus:ring-primary/20 cursor-pointer"
             checked={formData.generateDemoData}
-            onChange={(e) => setFormData({ ...formData, generateDemoData: e.target.checked })}
+            onChange={(e) => setFormData(prev => ({ ...prev, generateDemoData: e.target.checked }))}
             disabled={submitting}
           />
           <label htmlFor="demoData" className="text-sm font-medium text-foreground cursor-pointer">
