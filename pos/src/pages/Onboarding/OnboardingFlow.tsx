@@ -84,14 +84,7 @@ export default function OnboardingFlow() {
     }
   }, [isFinishing, navigate]);
 
-  const handleExit = useCallback(() => {
-    if (currentStep > 0) {
-      if (!window.confirm('Are you sure you want to exit setup? Progress on this screen will be lost.')) {
-        return;
-      }
-    }
-    window.location.href = '/app';
-  }, [currentStep]);
+
 
   const renderContent = () => {
     switch (currentStep) {
@@ -128,7 +121,6 @@ export default function OnboardingFlow() {
     <SetupLayout
       title={stepInfo.title}
       subtitle={stepInfo.subtitle}
-      onExit={handleExit}
       hideHeader={currentStep === STEPS.WELCOME}
       activeStep={currentStep}
     >

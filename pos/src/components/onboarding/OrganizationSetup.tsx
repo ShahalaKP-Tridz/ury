@@ -240,18 +240,23 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
           </FormField>
         </div>
 
-        <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-2xl border border-primary/10 mb-8">
+        <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-2xl border border-primary/10 mb-8">
           <input
             type="checkbox"
             id="demoData"
-            className="w-5 h-5 rounded-lg border-input text-primary focus:ring-primary/20 cursor-pointer"
+            className="w-5 h-5 mt-0.5 rounded-lg border-input text-primary focus:ring-primary/20 cursor-pointer"
             checked={formData.generateDemoData}
             onChange={(e) => setFormData(prev => ({ ...prev, generateDemoData: e.target.checked }))}
             disabled={submitting}
           />
-          <label htmlFor="demoData" className="text-sm font-medium text-foreground cursor-pointer">
-            Generate Demo Data for Exploration
-          </label>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="demoData" className="text-sm font-medium text-foreground cursor-pointer">
+              Generate Demo Data for Exploration
+            </label>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              If checked, we will create demo data for you to explore the system. This demo data can be erased later.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center justify-between pointer-events-auto">

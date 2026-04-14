@@ -1,39 +1,25 @@
 import React from 'react';
-import { ChevronLeft } from 'lucide-react';
 import { StepIndicator } from './StepIndicator';
 
 export const SetupLayout = ({ 
   children, 
   title, 
   subtitle,
-  onExit,
+
   hideHeader = false,
   activeStep
 }: { 
   children: React.ReactNode; 
   title: string; 
   subtitle: string;
-  onExit?: () => void;
+
   hideHeader?: boolean;
   activeStep?: number;
 }) => {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center py-10 px-6 italic-none font-inter selection:bg-primary/20">
       <div className="w-full max-w-4xl relative">
-        {/* Universal Exit Button - Re-positioned for better accessibility */}
-        {onExit && (
-          <button 
-            onClick={onExit}
-            className="group absolute left-0 top-0 lg:-left-32 flex items-center gap-3 text-muted-foreground hover:text-primary transition-all duration-300 z-50 py-2"
-          >
-            <div className="w-10 h-10 bg-card shadow-sm border border-border rounded-xl flex items-center justify-center group-hover:border-primary/30 group-hover:shadow-primary/5 transition-all">
-              <ChevronLeft size={20} />
-            </div>
-            <span className="text-xs font-black uppercase tracking-widest leading-none hidden sm:block">
-              Exit Setup
-            </span>
-          </button>
-        )}
+
         
         {/* Branded Header */}
         {!hideHeader && (
