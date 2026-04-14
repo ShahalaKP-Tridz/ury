@@ -8,9 +8,7 @@ import {
   Monitor,
   LogOut,
   RefreshCw,
-  Sparkles
 } from 'lucide-react';
-
 import { Button, Input } from './ui';
 import { useRootStore } from '../store/root-store';
 import { usePOSStore } from '../store/pos-store';
@@ -136,16 +134,8 @@ const Header = () => {
 
         {/* Right side actions */}
         <div className="flex items-center gap-4">
-          <Link 
-            to="/setup" 
-            className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors border border-blue-200"
-          >
-            <Sparkles className="w-4 h-4" />
-            Test Setup
-          </Link>
           {/* User menu */}
           <div className="relative" ref={userMenuRef}>
-
             <Button
               onClick={handleUserMenuToggle}
               variant="ghost"

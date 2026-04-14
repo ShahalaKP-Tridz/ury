@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { SetupCard, PrimaryButton, FormField, Input, Select } from './Shared';
-import { ArrowRight, ArrowLeft } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { setupOrganization, SetupOrganizationPayload } from '../../lib/onboarding-api';
+import { toast } from 'react-toastify';
 
 export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => void, onBack: () => void }) => {
   const [formData, setFormData] = useState({
     companyName: '',
     abbreviation: '',
     country: 'India',
-    timezone: '(GMT+05:30) India Standard Time',
+    timezone: 'Asia/Kolkata',
     taxType: 'GST',
     currency: 'INR',
     adminUsername: '',
@@ -16,6 +18,7 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
   });
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitting, setSubmitting] = useState(false);
 
   const validate = () => {
     const errors: Record<string, string> = {};
@@ -41,6 +44,46 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
 
   const isFormValid = Object.keys(validate()).length === 0;
 
+  const handleSubmit = async () => {
+    // Touch all fields so validation errors show
+    setTouched({ companyName: true, adminUsername: true, email: true });
+    if (!isFormValid) return;
+
+    setSubmitting(true);
+    try {
+      const payload: SetupOrganizationPayload = {
+        company_name: formData.companyName,
+        abbr: formData.abbreviation,
+        country: formData.country,
+        timezone: formData.timezone,
+        currency: formData.currency,
+        user_name: formData.adminUsername,
+        email: formData.email,
+        tax_system: formData.taxType,
+        generate_demo_data: formData.generateDemoData,
+      };
+
+      const result = await setupOrganization(payload);
+      toast.success(result.message);
+
+      // Pass both the raw form data (for downstream steps) and the company name
+      // which the menu step may optionally send back to the backend.
+      onNext({
+        company_name: formData.companyName,
+        abbreviation: formData.abbreviation,
+        country: formData.country,
+        timezone: formData.timezone,
+        currency: formData.currency,
+        tax_system: formData.taxType,
+        email: formData.email,
+      });
+    } catch (error: any) {
+      toast.error(error.message || 'Organization setup failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       <SetupCard>
@@ -52,14 +95,15 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
               className={touched.companyName && errors.companyName ? "border-destructive focus:ring-destructive/20" : ""}
               onChange={(e) => handleCompanyNameChange(e.target.value)}
               onBlur={() => setTouched({ ...touched, companyName: true })}
+              disabled={submitting}
             />
           </FormField>
 
           <FormField label="Timezone">
             <Select
               options={[
-                { label: '(GMT+05:30) Asia/Kolkata', value: '(GMT+05:30) India Standard Time' },
-                { label: '(GMT+04:00) Asia/Dubai', value: '(GMT+04:00) Gulf Standard Time' },
+                { label: '(GMT+05:30) Asia/Kolkata', value: 'Asia/Kolkata' },
+                { label: '(GMT+04:00) Asia/Dubai', value: 'Asia/Dubai' },
                 { label: '(GMT+00:00) UTC', value: 'UTC' }
               ]}
               value={formData.timezone}
@@ -72,12 +116,17 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
               placeholder="URY"
               value={formData.abbreviation}
               onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value })}
+              disabled={submitting}
             />
           </FormField>
 
           <FormField label="Country">
             <Select
-              options={[{ label: 'India', value: 'India' }, { label: 'USA', value: 'USA' }]}
+              options={[
+                { label: 'India', value: 'India' },
+                { label: 'United Arab Emirates', value: 'United Arab Emirates' },
+                { label: 'United States', value: 'United States' }
+              ]}
               value={formData.country}
               onChange={(val) => setFormData({ ...formData, country: val })}
             />
@@ -93,7 +142,11 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
 
           <FormField label="Currency">
             <Select
-              options={[{ label: 'INR (₹)', value: 'INR' }, { label: 'USD ($)', value: 'USD' }]}
+              options={[
+                { label: 'INR (₹)', value: 'INR' },
+                { label: 'AED (د.إ)', value: 'AED' },
+                { label: 'USD ($)', value: 'USD' }
+              ]}
               value={formData.currency}
               onChange={(val) => setFormData({ ...formData, currency: val })}
             />
@@ -110,6 +163,7 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
               className={touched.adminUsername && errors.adminUsername ? "border-destructive focus:ring-destructive/20" : ""}
               onChange={(e) => setFormData({ ...formData, adminUsername: e.target.value })}
               onBlur={() => setTouched({ ...touched, adminUsername: true })}
+              disabled={submitting}
             />
           </FormField>
 
@@ -121,6 +175,7 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
               className={touched.email && errors.email ? "border-destructive focus:ring-destructive/20" : ""}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               onBlur={() => setTouched({ ...touched, email: true })}
+              disabled={submitting}
             />
           </FormField>
         </div>
@@ -132,6 +187,7 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
             className="w-5 h-5 rounded-lg border-input text-primary focus:ring-primary/20 cursor-pointer"
             checked={formData.generateDemoData}
             onChange={(e) => setFormData({ ...formData, generateDemoData: e.target.checked })}
+            disabled={submitting}
           />
           <label htmlFor="demoData" className="text-sm font-medium text-foreground cursor-pointer">
             Generate Demo Data for Exploration
@@ -141,16 +197,21 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
         <div className="flex items-center justify-between pointer-events-auto">
           <button
             onClick={onBack}
-            className="text-muted-foreground hover:text-foreground font-medium flex items-center gap-2 transition-colors px-4 py-2 text-sm"
+            disabled={submitting}
+            className="text-muted-foreground hover:text-foreground font-medium flex items-center gap-2 transition-colors px-4 py-2 text-sm disabled:opacity-50"
           >
             <ArrowLeft size={18} /> Back
           </button>
 
           <PrimaryButton
-            disabled={!isFormValid}
-            onClick={() => onNext(formData)}
+            disabled={!isFormValid || submitting}
+            onClick={handleSubmit}
           >
-            Continue <ArrowRight size={18} />
+            {submitting ? (
+              <><Loader2 size={18} className="animate-spin" /> Setting Up…</>
+            ) : (
+              <>Continue <ArrowRight size={18} /></>
+            )}
           </PrimaryButton>
         </div>
       </SetupCard>

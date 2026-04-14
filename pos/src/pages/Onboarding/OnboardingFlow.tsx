@@ -36,18 +36,18 @@ export default function OnboardingFlow() {
   };
   const back = () => setCurrentStep(prev => prev - 1);
 
+  /**
+   * "Finish Setup" handler on the final Settings step.
+   *
+   * At this point the Organization and Menu have already been persisted via
+   * their respective APIs (setup_organization & setup_menu).  This step
+   * simply marks onboarding as complete so the POS loads normally.
+   */
   const handleFinish = async () => {
     try {
       setIsFinishing(true);
-      const response = await (window as any).frappe.call({
-        method: 'ury.ury.api.ury_setup.complete_onboarding',
-        args: { data: formData }
-      });
-
-      if (response.message?.status === 'success') {
-        toast.success(response.message.message);
-        usePOSStore.setState({ needsOnboarding: false });
-      }
+      toast.success("Setup completed successfully!");
+      usePOSStore.setState({ needsOnboarding: false });
     } catch (error: any) {
       toast.error(error.message || "Failed to complete setup");
     } finally {
@@ -56,9 +56,14 @@ export default function OnboardingFlow() {
   };
 
   const handleExit = () => {
-    if (confirm("Are you sure you want to exit setup? Your progress might not be saved.")) {
-      window.location.href = "/app";
+    // If we're past the welcome screen, ask for confirmation
+    if (currentStep > 0) {
+      if (!confirm("Are you sure you want to exit setup? Progress on this screen will be lost.")) {
+        return;
+      }
     }
+    // Redirect to Frappe Desk
+    window.location.href = "/app";
   };
 
   const renderContent = () => {
@@ -66,7 +71,13 @@ export default function OnboardingFlow() {
       case STEPS.WELCOME: return <WelcomeScreen onNext={() => goTo(STEPS.ORGANIZATION)} />;
       case STEPS.ORGANIZATION: return <OrganizationSetup onNext={next} onBack={() => goTo(STEPS.WELCOME)} />;
       case STEPS.MODE: return <ModeSelection onSelect={(mode) => next({ setup_mode: mode })} />;
-      case STEPS.MENU: return <MenuSetup onNext={next} onBack={back} />;
+      case STEPS.MENU: return (
+        <MenuSetup
+          onNext={next}
+          onBack={back}
+          companyName={formData.company_name}
+        />
+      );
       case STEPS.SETTINGS: return <SettingsConfiguration onFinish={handleFinish} onBack={back} disabled={isFinishing} />;
       default: return null;
     }
@@ -78,7 +89,7 @@ export default function OnboardingFlow() {
     <SetupLayout
       title={stepInfo.title}
       subtitle={stepInfo.subtitle}
-      onExit={currentStep > 0 ? handleExit : undefined}
+      onExit={handleExit}
       hideHeader={currentStep === STEPS.WELCOME}
       activeStep={currentStep}
     >
