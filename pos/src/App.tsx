@@ -61,27 +61,30 @@ function App() {
     <>
       <ToastProvider />
       <ScreenSizeProvider>
-        <AuthGuard>
-          <POSOpeningProvider>
-            <Router basename="/pos">
-              <Routes>
-                {/* Onboarding is SEPARATE - No Header or Footer */}
-                <Route 
-                  path="/setup" 
-                  element={<OnboardingFlow />} 
-                />
-                
-                {/* Main POS Layout - Includes Header and Footer */}
-                <Route element={<MainLayout />}>
-                  <Route path="/" element={needsOnboarding ? <Navigate to="/setup" replace /> : <POS />} />
-                  <Route path="/orders" element={needsOnboarding ? <Navigate to="/setup" replace /> : <Orders />} />
-                  <Route path="/table" element={needsOnboarding ? <Navigate to="/setup" replace /> : <Table />} />
-                </Route>
-              </Routes>
-            </Router>
-
-          </POSOpeningProvider>
-        </AuthGuard>
+        <Router basename="/pos">
+          <Routes>
+            {/* Public Setup Route */}
+            <Route 
+              path="/setup" 
+              element={<OnboardingFlow />} 
+            />
+            
+            {/* Root Route - Handles redirection to setup if needed */}
+            <Route path="/" element={
+              needsOnboarding ? <Navigate to="/setup" replace /> : (
+                <AuthGuard>
+                  <POSOpeningProvider>
+                    <MainLayout />
+                  </POSOpeningProvider>
+                </AuthGuard>
+              )
+            }>
+              <Route index element={<POS />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="table" element={<Table />} />
+            </Route>
+          </Routes>
+        </Router>
       </ScreenSizeProvider>
     </>
   );

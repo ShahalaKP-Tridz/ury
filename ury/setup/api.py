@@ -16,6 +16,7 @@ def setup_organization(**kwargs):
     currency = kwargs.get("currency")
     user_name = kwargs.get("user_name")
     email = kwargs.get("email")
+    password = kwargs.get("password")
     generate_demo_data = kwargs.get("generate_demo_data")
 
     if not (company_name and abbr and country and currency and email and user_name):
@@ -32,7 +33,11 @@ def setup_organization(**kwargs):
         # Assign System Manager Role explicitly so they can be the initial owner
         if not frappe.db.exists("Has Role", {"parent": email, "role": "System Manager"}):
             user.append("roles", {"role": "System Manager"})
-            user.save(ignore_permissions=True)
+            
+        if password:
+            user.new_password = password
+            
+        user.save(ignore_permissions=True)
 
     # 2. Company Creation
     if not frappe.db.exists("Company", company_name):
@@ -74,6 +79,15 @@ def setup_organization(**kwargs):
         except Exception as e:
             frappe.log_error("Failed to generate demo data during minimal installation", str(e))
             return {"status": "success", "message": _("Organization setup completed successfully, but demo data generation encountered an issue.")}
+
+    # 5. Automatic Login for the newly created user
+    if password:
+        try:
+            from frappe.auth import LoginManager
+            frappe.local.login_manager = LoginManager()
+            frappe.local.login_manager.login_as(email)
+        except Exception as e:
+            frappe.log_error("Automatic login failed during setup", str(e))
 
     return {"status": "success", "message": _("Organization setup completed successfully.")}
 
@@ -180,6 +194,18 @@ def setup_menu(**kwargs):
         ury_menu.price_list = price_list
         ury_menu.enabled = 1
     
+    # Get or create default POS Profile for the company
+    pos_profile_name = f"Default POS - {company_name}"
+    if not frappe.db.exists("POS Profile", pos_profile_name):
+        pos_profile = frappe.new_doc("POS Profile")
+        pos_profile.name = pos_profile_name
+        pos_profile.company = company_name
+        pos_profile.currency = frappe.db.get_value("Company", company_name, "default_currency")
+        pos_profile.warehouse = frappe.db.get_value("Warehouse", {"company": company_name, "is_group": 0}, "name")
+        pos_profile.selling_price_list = price_list
+        pos_profile.insert(ignore_permissions=True)
+        frappe.db.commit()
+    
     for item_data in items:
         item_name = item_data.get("item_name")
         price = item_data.get("price")
@@ -236,3 +262,21 @@ def setup_menu(**kwargs):
     ury_menu.save(ignore_permissions=True)
         
     return {"status": "success", "message": _("Menu items mapped successfully"), "created_items": created_items}
+
+
+@frappe.whitelist(allow_guest=True)
+def check_setup_status():
+    """
+    Checks if the minimum setup (Company + Menu) has been completed.
+    Returns: {"setup_complete": bool}
+    """
+    # 1. Check if a default company is set
+    company = frappe.db.get_single_value("Global Defaults", "default_company")
+    if not company:
+        return {"setup_complete": False}
+    
+    # 2. Check if at least one URY Menu exists and is enabled
+    if not frappe.db.exists("URY Menu", {"enabled": 1}):
+        return {"setup_complete": False}
+        
+    return {"setup_complete": True}

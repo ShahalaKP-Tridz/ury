@@ -13,6 +13,7 @@ interface OrganizationFormData {
   currency: string;
   adminUsername: string;
   email: string;
+  password?: string;
   generateDemoData: boolean;
 }
 
@@ -25,6 +26,7 @@ const INITIAL_FORM: OrganizationFormData = {
   currency: 'INR',
   adminUsername: '',
   email: '',
+  password: '',
   generateDemoData: true,
 };
 
@@ -73,6 +75,12 @@ function validate(data: OrganizationFormData): Record<string, string> {
     errors.email = 'Invalid email format';
   }
 
+  if (!data.password) {
+    errors.password = 'Password is required';
+  } else if (data.password.length < 6) {
+    errors.password = 'Password must be at least 6 characters';
+  }
+
   return errors;
 }
 
@@ -109,7 +117,7 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
 
   const handleSubmit = async () => {
     // Touch all required fields so validation errors show
-    setTouched({ companyName: true, adminUsername: true, email: true });
+    setTouched({ companyName: true, adminUsername: true, email: true, password: true });
     if (!isFormValid || submitting) return;
 
     setSubmitting(true);
@@ -122,6 +130,7 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
         currency: formData.currency,
         user_name: formData.adminUsername.trim(),
         email: formData.email.trim().toLowerCase(),
+        password: formData.password,
         tax_system: formData.taxType,
         generate_demo_data: formData.generateDemoData,
       };
@@ -236,6 +245,19 @@ export const OrganizationSetup = ({ onNext, onBack }: { onNext: (data: any) => v
               disabled={submitting}
               maxLength={254}
               autoComplete="email"
+            />
+          </FormField>
+
+          <FormField label="Admin Password" required error={touched.password ? errors.password : undefined}>
+            <Input
+              type="password"
+              placeholder="••••••••"
+              value={formData.password}
+              className={touched.password && errors.password ? "border-destructive focus:ring-destructive/20" : ""}
+              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+              onBlur={() => markTouched('password')}
+              disabled={submitting}
+              autoComplete="new-password"
             />
           </FormField>
         </div>

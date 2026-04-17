@@ -10,6 +10,7 @@ export interface SetupOrganizationPayload {
   currency: string;
   user_name: string;
   email: string;
+  password?: string;
   tax_system?: string;
   generate_demo_data?: boolean | number;
 }

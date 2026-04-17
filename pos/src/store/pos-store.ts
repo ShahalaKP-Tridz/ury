@@ -213,12 +213,25 @@ export const usePOSStore = create<POSStore>((set, get) => ({
     try {
       set({ isInitializing: true, error: null });
       
-      const [profileResult, menuResult, categoriesResult, paymentModesResult, setupResult] = await Promise.allSettled([
+      // 1. First, check if setup is complete
+      // This is crucial for Guest access during onboarding
+      const setupResponse = await window.frappe.call('ury.setup.api.check_setup_status');
+      const setupComplete = setupResponse.message?.setup_complete;
+      
+      set({ needsOnboarding: !setupComplete });
+
+      if (!setupComplete) {
+        set({ isInitializing: false });
+        return;
+      }
+
+      // 2. If setup is complete, fetch the rest of the app data
+      // These calls might require authentication
+      const [profileResult, menuResult, categoriesResult, paymentModesResult] = await Promise.allSettled([
         get().fetchPosProfile(),
         get().fetchMenuItems(),
         get().fetchCategories(),
         get().fetchPaymentModes(),
-        window.frappe.call('ury.ury.api.ury_setup.check_setup_status')
       ]);
 
       if (profileResult.status === 'rejected' || 
@@ -226,24 +239,11 @@ export const usePOSStore = create<POSStore>((set, get) => ({
           categoriesResult.status === 'rejected' ||
           paymentModesResult.status === 'rejected') {
         
-        // If profile/menu failed, but setup might be complete, check setup specifically
-        if (setupResult.status === 'fulfilled') {
-          const setupComplete = (setupResult.value as any).message?.setup_complete;
-          if (!setupComplete) {
-            set({ needsOnboarding: true, isInitializing: false });
-            return;
-          }
-        }
-
         set({ 
           error: 'Failed to initialize app. Please refresh the page.',
           isInitializing: false 
         });
         return;
-      }
-
-      if (setupResult.status === 'fulfilled') {
-        set({ needsOnboarding: !(setupResult.value as any).message?.setup_complete });
       }
 
       set({ isInitializing: false });
