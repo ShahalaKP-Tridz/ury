@@ -41,7 +41,7 @@ class URYMenu(Document):
                     item_code=d.item,
                     price_list_rate=d.rate,
                 )
-            ).insert()
+            ).insert(ignore_permissions=True)
 
     def get_price_list(self):
         """Create price list for menu if missing"""
@@ -57,6 +57,6 @@ class URYMenu(Document):
 
         price_list.enabled = 1
         price_list.selling = 1
-        price_list.save()
+        price_list.save(ignore_permissions=True)
 
         return price_list
