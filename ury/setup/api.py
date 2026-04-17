@@ -1,6 +1,9 @@
 import frappe
-from frappe import _
 import json
+import csv
+import io
+from frappe import _
+from frappe.utils.password import update_password
 from erpnext.setup.setup_wizard.operations.taxes_setup import setup_taxes_and_charges
 from ury.setup.demo import setup_ury_demo_data
 
@@ -90,7 +93,6 @@ def upload_menu_csv(file_url=None):
     Parses an uploaded CSV file from Frappe generic attachment or explicit multipart file uploads.
     """
     #check_setup_lock()
-    import csv, io
     content = ""
     
     if file_url:
@@ -132,7 +134,6 @@ def setup_menu(**kwargs):
     API for Minimal Installation Page 2 (Menu & Pricing Setup)
     """
     #check_setup_lock()
-    import json
     
     company_name = kwargs.get("company_name") or frappe.db.get_single_value("Global Defaults", "default_company")
     items = kwargs.get("items")
@@ -352,7 +353,6 @@ def setup_ury_room(**kwargs):
     API for Minimal Installation Page 3 - URY Room Setup
     """
     #check_setup_lock()
-    import json
     
     room_name = kwargs.get("room_name")
     branch = kwargs.get("branch")
@@ -641,7 +641,6 @@ def setup_branch_restaurant(**kwargs):
     API for Minimal Installation Page 3 - Branch and URY Restaurant Setup
     """
     #check_setup_lock()
-    import json
     
     branch_name = kwargs.get("branch")
     if not branch_name:
@@ -789,8 +788,6 @@ def setup_user_management(**kwargs):
     API for Minimal Installation Page 6 - User Management Setup
     """
     #check_setup_lock()
-    import json
-    from frappe.utils.password import update_password
     
     users = kwargs.get("users")
     finish_setup = kwargs.get("finish_setup", 0)
