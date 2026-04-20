@@ -203,6 +203,33 @@ def setup_menu(**kwargs):
         pos_profile.currency = frappe.db.get_value("Company", company_name, "default_currency")
         pos_profile.warehouse = frappe.db.get_value("Warehouse", {"company": company_name, "is_group": 0}, "name")
         pos_profile.selling_price_list = price_list
+        
+        # URY's custom hook strictly requires a Cost Center
+        default_cost_center = frappe.db.get_value("Company", company_name, "cost_center")
+        if not default_cost_center:
+            default_cost_center = frappe.db.get_value("Cost Center", {"company": company_name, "is_group": 0}, "name")
+        pos_profile.cost_center = default_cost_center
+        pos_profile.write_off_cost_center = default_cost_center
+        
+        # ERPNext strictly mandates a Write Off Account
+        write_off_acc = frappe.db.get_value("Company", company_name, "default_expense_account")
+        if not write_off_acc:
+            write_off_acc = frappe.db.get_value("Account", {"company": company_name, "account_type": "Expense", "is_group": 0}, "name")
+        pos_profile.write_off_account = write_off_acc
+        
+        # ERPNext formally mandates at least one payment method for a POS Profile
+        if not frappe.db.exists("Mode of Payment", "Cash"):
+            mop = frappe.new_doc("Mode of Payment")
+            mop.mode_of_payment = "Cash"
+            mop.type = "Cash"
+            mop.enabled = 1
+            mop.insert(ignore_permissions=True, ignore_mandatory=True)
+            
+        pos_profile.append("payments", {
+            "mode_of_payment": "Cash",
+            "default": 1
+        })
+        
         pos_profile.insert(ignore_permissions=True)
         frappe.db.commit()
     
