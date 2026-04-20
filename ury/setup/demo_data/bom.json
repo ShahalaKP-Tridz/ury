@@ -1,6 +1,7 @@
 [
     {
         "doctype": "BOM",
+        "company": "__COMPANY__",
         "item": "CG",
         "qty":10,
         "items":
@@ -21,6 +22,7 @@
     },
     {
         "doctype": "BOM",
+        "company": "__COMPANY__",
         "item": "MOM",
         "qty":10,
         "items":
@@ -41,6 +43,7 @@
     },
     {
         "doctype": "BOM",
+        "company": "__COMPANY__",
         "item": "WNG",
         "qty":20,
         "items":

@@ -44,6 +44,13 @@ def setup_organization(**kwargs):
             user.save(ignore_permissions=True)
 
     # 2. Company Creation
+    # Standard ERPNext company insertion expects the 'Transit' Warehouse Type fixture to exist 
+    if not frappe.db.exists("Warehouse Type", "Transit"):
+        frappe.get_doc({
+            "doctype": "Warehouse Type",
+            "warehouse_type": "Transit"
+        }).insert(ignore_permissions=True, ignore_mandatory=True)
+
     if not frappe.db.exists("Company", company_name):
         company = frappe.new_doc("Company")
         company.company_name = company_name

@@ -26,12 +26,15 @@ def setup_ury_demo_data(company):
     capture("demo_data_creation_started", "ury")
     try:
         frappe.defaults.set_user_default("Company", company)
+        frappe.db.set_single_value("Stock Settings", "allow_negative_stock", 1)
         process_masters(company)
         process_transactions(company)
         generate_pos_demo()
+        frappe.db.set_single_value("Stock Settings", "allow_negative_stock", 0)
         frappe.cache.delete_keys("bootinfo")
         frappe.publish_realtime("demo_data_complete")
     except Exception:
+        frappe.db.set_single_value("Stock Settings", "allow_negative_stock", 0)
         frappe.log_error("Failed to create demo data")
         capture("demo_data_creation_failed", "ury", properties={"exception": frappe.get_traceback()})
         raise
@@ -52,11 +55,16 @@ def process_masters(company):
 
 
 def create_demo_record(doctype):
-    frappe.get_doc(doctype).insert(ignore_permissions=True)
+    try:
+        frappe.get_doc(doctype).insert(ignore_permissions=True, ignore_if_duplicate=True)
+    except Exception as e:
+        if type(e).__name__ in ("ItemPriceDuplicateItem", "DuplicateEntryError", "NameError") or "DuplicateEntryError" in type(e).__name__:
+            pass
+        else:
+            raise
 
 
 def process_transactions(company):
-    frappe.db.set_single_value("Stock Settings", "allow_negative_stock", 1)
     from erpnext.accounts.utils import FiscalYearError
 
     try:
@@ -78,7 +86,6 @@ def process_transactions(company):
     convert_production_plan_to_work_orders()
     convert_material_requests()
     convert_order_to_invoices()
-    frappe.db.set_single_value("Stock Settings","allow_negative_stock", 0)
 
 
 def create_transaction(doctype, company, start_date):
@@ -156,6 +163,12 @@ def convert_order_to_invoices():
                     invoice = make_purchase_invoice(order.name)
             elif document == "Sales Order":
                 invoice = make_sales_invoice(order.name)
+                # Ury overrides order_type options for POS
+                invoice.order_type = "Dine In"
+            
+            if not invoice.get("items"):
+                continue
+
             invoice.set_posting_time = 1
             invoice.posting_date = order.transaction_date
             invoice.due_date = order.transaction_date
@@ -171,7 +184,7 @@ def convert_order_to_invoices():
             # Leave some invoices fully billed to allow for Completed status
             if i % 3 != 0:
                 for item in invoice.items:
-                    item.qty = item.qty * 0.7
+                    item.qty = max(1, int(item.qty * 0.7))
             invoice.submit()
             
             if i % 2 != 0:
@@ -221,16 +234,22 @@ def convert_material_requests():
         if mr.material_request_type == "Purchase":
             # Create Purchase Order
             po = make_purchase_order(mr.name)
+            if not po.get("items"):
+                continue
             po.supplier = get_supplier()
             for item in po.items:
                 item.schedule_date = po.transaction_date
                 if not item.rate:
                     item.rate = 100
+            po.set_missing_values()
+            po.calculate_taxes_and_totals()
             po.insert(ignore_permissions=True)
             po.submit()
         elif mr.material_request_type == "Material Transfer":
             # Create Stock Entry
             se = make_stock_entry(mr.name)
+            if not se.get("items"):
+                continue
             se.insert(ignore_permissions=True)
             se.submit()
 
@@ -243,6 +262,8 @@ def convert_production_plan_to_work_orders():
     for i, plan in enumerate(production_plans):
         plan_doc = frappe.get_doc("Production Plan", plan.name)
         for idx, item in enumerate(plan_doc.po_items):
+            if frappe.db.exists("Work Order", {"production_plan": plan.name, "production_plan_item": item.name}):
+                continue
             wo = frappe.new_doc("Work Order")
             wo.production_item = item.item_code
             wo.bom_no = item.bom_no
@@ -332,6 +353,21 @@ def get_bank_account(company):
     acc = frappe.db.get_value("Company", company, "default_bank_account")
     if not acc:
         acc = frappe.db.get_value("Account", {"company": company, "account_type": "Bank", "is_group": 0}, "name")
+    if not acc:
+        parent_bank = frappe.db.get_value("Account", {"company": company, "account_type": "Bank", "is_group": 1}, "name")
+        if parent_bank:
+            doc = frappe.get_doc({
+                "doctype": "Account",
+                "account_name": "Demo Bank",
+                "parent_account": parent_bank,
+                "company": company,
+                "account_type": "Bank",
+                "is_group": 0
+            })
+            doc.insert(ignore_permissions=True, ignore_if_duplicate=True)
+            acc = doc.name
+        else:
+            acc = frappe.db.get_value("Account", {"company": company, "is_group": 0}, "name")
     return acc
 
 
@@ -352,6 +388,8 @@ def replace_placeholders(data, company):
                 data[key] = get_cost_center(company)
             elif value == "__WAREHOUSE__":
                 data[key] = get_warehouse(company)
+            elif value == "__COMPANY__":
+                data[key] = company
             elif isinstance(value, str) and value.startswith("__BOM_FOR_"):
                 item_code = value.replace("__BOM_FOR_", "").replace("__", "")
                 data[key] = get_bom_for_item(item_code, company)

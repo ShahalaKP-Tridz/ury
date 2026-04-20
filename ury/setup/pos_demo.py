@@ -63,11 +63,14 @@ def add_opening_stock(company, warehouse):
 
 def create_pos_opening(company):
     pos_profile = get_pos_profile(company)
+    profile_doc = frappe.get_cached_doc("POS Profile", pos_profile)
     cashier = get_cashier_user() 
     opening = frappe.get_doc({
         "doctype": "POS Opening Entry",
         "company": company,
         "pos_profile": pos_profile,
+        "restaurant": profile_doc.restaurant,
+        "branch": getattr(profile_doc, "branch", None),
         "user": cashier,
         "period_start_date": nowdate(),
         "posting_date": nowdate(),
