@@ -64,11 +64,11 @@ function App() {
         <Router basename="/pos">
           <Routes>
             {/* Public Setup Route */}
-            <Route 
-              path="/setup" 
-              element={<OnboardingFlow />} 
+            <Route
+              path="/setup"
+              element={<OnboardingFlow />}
             />
-            
+
             {/* Root Route - Handles redirection to setup if needed */}
             <Route path="/" element={
               needsOnboarding ? <Navigate to="/setup" replace /> : (
@@ -86,6 +86,15 @@ function App() {
           </Routes>
         </Router>
       </ScreenSizeProvider>
+    </>
+  );
+}
+
+export default App;
+            </Route >
+          </Routes >
+        </Router >
+      </ScreenSizeProvider >
     </>
   );
 }
