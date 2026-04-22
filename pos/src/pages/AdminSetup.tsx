@@ -12,7 +12,6 @@ import {
   BedDouble,
   Settings,
   ChevronRight,
-  ArrowLeft,
   Layers,
   Bell,
   Shield,
@@ -111,23 +110,14 @@ export function AdminSetup() {
     <div className="min-h-screen bg-gray-50 flex flex-col font-inter">
       {/* Top Bar */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-4 flex-shrink-0 z-10">
-        <button
-          onClick={() => navigate('/pos')}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors font-medium"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Selection
-        </button>
-
         <div className="w-px h-5 bg-gray-200" />
 
         <div className="flex items-center gap-2">
-          <img 
-            src="/assets/ury/pos/ury_pos.png" 
-            alt="URY POS" 
+          <img
+            src="/assets/ury/pos/ury_pos.png"
+            alt="URY POS"
             className="h-8 w-auto object-contain"
           />
-          <span className="text-gray-400 text-sm">— Advanced Installation</span>
         </div>
 
         <div className="ml-auto flex items-center gap-3">
@@ -140,9 +130,6 @@ export function AdminSetup() {
           >
             <Settings className="w-4 h-4" />
           </button>
-          <span className="hidden sm:inline-flex text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full font-medium border border-slate-200">
-            Advanced Mode
-          </span>
         </div>
       </header>
 
@@ -169,11 +156,10 @@ export function AdminSetup() {
                     <button
                       key={nav.id}
                       onClick={() => setActiveNav(nav.id)}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg mb-0.5 text-left transition-colors ${
-                        activeNav === nav.id
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg mb-0.5 text-left transition-colors ${activeNav === nav.id
                           ? "bg-primary-50 text-primary-700"
                           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                      }`}
+                        }`}
                       style={{ fontSize: "0.875rem", fontWeight: activeNav === nav.id ? 600 : 400 }}
                     >
                       {nav.icon}
