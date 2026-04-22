@@ -8,11 +8,12 @@ import { getCustomerGroups, getCustomerTerritories } from '../lib/customer-api';
 import { DEFAULT_ORDER_TYPE, OrderType } from '../data/order-types';
 import { getTableOrder, TableOrder } from '../lib/order-api';
 import { getPaymentModes } from '../lib/payment-api';
+import { onboardingApi } from '../lib/onboarding-api';
 
 // Constants
 const MAX_QUANTITY = 99;
 const MIN_QUANTITY = 0;
-const ITEMS_PER_PAGE = 10;
+// Items per page removed as it is handled by the component or defaults
 
 // Custom error class for cart operations
 class CartError extends Error {
@@ -120,6 +121,8 @@ interface POSState {
   tableOrder: TableOrder | null;
   isInitializing: boolean;
   orderComment: string;
+  needsOnboarding: boolean;
+  onboardingCompleted: boolean;
 }
 
 interface POSStore extends POSState {
@@ -154,6 +157,8 @@ interface POSStore extends POSState {
   clearTableOrder: () => void;
   isMenuInteractionDisabled: () => boolean;
   isOrderInteractionDisabled: () => boolean;
+  setNeedsOnboarding: (val: boolean) => void;
+  completeOnboarding: () => Promise<void>;
   initializeApp: () => Promise<void>;
   setOrderForUpdate: (orderId: string | null) => void;
   resetOrderState: () => void;
@@ -204,34 +209,65 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   isUpdatingOrder: false,
   orderId: null,
   orderComment: '',
+  needsOnboarding: false,
+  onboardingCompleted: localStorage.getItem('ury_onboarding_done') === 'true',
+
+  setNeedsOnboarding: (val: boolean) => set({ needsOnboarding: val }),
+  
+  completeOnboarding: async () => {
+    localStorage.setItem('ury_onboarding_done', 'true');
+    // Clear resume data
+    localStorage.removeItem('ury_onboarding_step');
+    localStorage.removeItem('ury_onboarding_data');
+    set({ needsOnboarding: false, onboardingCompleted: true });
+  },
 
   initializeApp: async () => {
     try {
       set({ isInitializing: true, error: null });
-      
-      const [profileResult, menuResult, categoriesResult, paymentModesResult] = await Promise.allSettled([
-        get().fetchPosProfile(),
-        get().fetchMenuItems(),
-        get().fetchCategories(),
-        get().fetchPaymentModes()
-      ]);
 
-      if (profileResult.status === 'rejected' || 
-          menuResult.status === 'rejected' || 
+      // 1. Check Frontend Lock (Fastest)
+      const localCompleted = localStorage.getItem('ury_onboarding_done') === 'true';
+      
+      if (localCompleted) {
+        set({ needsOnboarding: false, onboardingCompleted: true });
+      } else {
+        // 2. Check Backend Fallback
+        try {
+          const { needsOnboarding } = await onboardingApi.checkSetupStatus();
+          set({ needsOnboarding });
+        } catch (e) {
+          // If backend fails during init, assume onboarding is needed if no local flag
+          set({ needsOnboarding: true });
+        }
+      }
+
+      // If onboarding is NOT needed, fetch core data
+      if (!get().needsOnboarding) {
+        const [profileResult, menuResult, categoriesResult, paymentModesResult] = await Promise.allSettled([
+          get().fetchPosProfile(),
+          get().fetchMenuItems(),
+          get().fetchCategories(),
+          get().fetchPaymentModes()
+        ]);
+
+        if (profileResult.status === 'rejected' ||
+          menuResult.status === 'rejected' ||
           categoriesResult.status === 'rejected' ||
           paymentModesResult.status === 'rejected') {
-        set({ 
-          error: 'Failed to initialize app. Please refresh the page.',
-          isInitializing: false 
-        });
-        return;
+          set({
+            error: 'Failed to initialize app. Please refresh the page.',
+            isInitializing: false
+          });
+          return;
+        }
       }
 
       set({ isInitializing: false });
     } catch (error) {
-      set({ 
+      set({
         error: 'Failed to initialize app. Please refresh the page.',
-        isInitializing: false 
+        isInitializing: false
       });
     }
   },
@@ -241,8 +277,8 @@ export const usePOSStore = create<POSStore>((set, get) => ({
       const cached = sessionStorage.getItem('posProfile');
       if (cached) {
         const profile = JSON.parse(cached);
-        set({ 
-          posProfile: profile, 
+        set({
+          posProfile: profile,
           profileLoading: false,
           currency: profile.currency || 'INR'
         });
@@ -254,22 +290,22 @@ export const usePOSStore = create<POSStore>((set, get) => ({
 
       set({ profileLoading: true, error: null });
       const combinedProfile = await getCombinedPosProfile();
-      
+
       sessionStorage.setItem('posProfile', JSON.stringify(combinedProfile));
-      set({ 
-        posProfile: combinedProfile, 
+      set({
+        posProfile: combinedProfile,
         profileLoading: false,
         currency: combinedProfile.currency || 'INR'
       });
-      
+
       if (!storage.getItem('currencySymbol')) {
         await get().fetchCurrencySymbol();
       }
     } catch (error) {
       console.error('Error fetching POS profile:', error);
-      set({ 
+      set({
         error: 'Failed to fetch POS profile',
-        profileLoading: false 
+        profileLoading: false
       });
     }
   },
@@ -279,7 +315,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
       const currency = get().currency;
       const response = await getCurrencyInfo(currency);
       const { symbol } = response;
-      
+
       set({ currencySymbol: symbol });
       storage.setItem('currencySymbol', symbol);
     } catch (error) {
@@ -296,7 +332,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
     try {
       set({ menuLoading: true, error: null });
       const items = await getRestaurantMenu(posProfile.name, selectedRoom, selectedOrderType);
-      
+
       const menuItems: MenuItem[] = items.map(item => ({
         id: item.item,
         name: item.item_name,
@@ -325,7 +361,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
     try {
       set({ menuLoading: true, error: null });
       const items = await getAggregatorMenu(aggregator);
-      
+
       const menuItems: MenuItem[] = items.map(item => ({
         ...item,
         id: item.item,
@@ -397,7 +433,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
           quantity: newQuantity,
           comment: newComment
         };
-        
+
         set({ activeOrders: newOrders });
       } else {
         const newOrders = [...get().activeOrders, { ...item, uniqueId }];
@@ -453,8 +489,8 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   setSelectedCustomer: (customer) => set({ selectedCustomer: customer }),
   setSelectedTable: (table: string | null, room: string | null, doNotLoadOrder: boolean = false) => {
     set({ selectedTable: table, selectedRoom: room });
-    if (table ) {
-      if (!doNotLoadOrder) 
+    if (table) {
+      if (!doNotLoadOrder)
         get().loadTableOrder(table);
     } else {
       get().clearTableOrder();
@@ -465,14 +501,14 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   },
   setSelectedOrderType: (type) => {
     const { fetchMenuItems } = get();
-    
-    set({ 
+
+    set({
       activeOrders: [],
       selectedOrderType: type,
       isUpdatingOrder: false,
       orderId: null
     });
-    
+
     if (type !== 'Aggregators') {
       fetchMenuItems();
     }
@@ -484,8 +520,8 @@ export const usePOSStore = create<POSStore>((set, get) => ({
 
   processPayment: async (paymentMode: string, amount: number) => {
     try {
-      const { activeOrders, cartId, selectedCustomer, selectedOrderType } = get();
-      
+      const { cartId, selectedCustomer, selectedOrderType } = get();
+
       const order: Order = {
         id: uuidv4(),
         cartId: cartId!,
@@ -502,7 +538,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
 
       const newOrders = [...get().orders, order];
       set({ orders: newOrders });
-      
+
       await get().clearOrder();
     } catch (error) {
       set({ error: (error as Error).message });
@@ -511,8 +547,8 @@ export const usePOSStore = create<POSStore>((set, get) => ({
 
   updateOrderStatus: async (orderId: string, status: Order['status']) => {
     try {
-      const newOrders = get().orders.map(order => 
-        order.id === orderId 
+      const newOrders = get().orders.map(order =>
+        order.id === orderId
           ? { ...order, status, updatedAt: new Date().toISOString() }
           : order
       );
@@ -549,7 +585,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   getCartTotals: (): CartTotals => {
     const items = get().activeOrders;
     const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-    
+
     const subtotal = items.reduce((sum, item) => {
       const itemPrice = calculateItemPrice(item);
       return sum + (itemPrice * item.quantity);
@@ -615,7 +651,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
           } as OrderItem;
         });
 
-        set({ 
+        set({
           tableOrder: response,
           activeOrders: orderItems,
           selectedCustomer: order.customer ? {
@@ -627,7 +663,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
           orderId: order.name,
         });
       } else {
-        set({ 
+        set({
           tableOrder: null,
           activeOrders: [],
           selectedCustomer: null,
@@ -636,7 +672,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
         });
       }
     } catch (error) {
-      set({ 
+      set({
         error: 'Failed to load table order',
         tableOrder: null,
         activeOrders: [],
@@ -650,7 +686,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   },
 
   clearTableOrder: () => {
-    set({ 
+    set({
       tableOrder: null,
       activeOrders: [],
       selectedCustomer: null,
@@ -660,7 +696,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   },
 
   setOrderForUpdate: (orderId: string | null) => {
-    set({ 
+    set({
       isUpdatingOrder: orderId !== null,
       orderId,
     });
@@ -668,7 +704,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
 
   resetOrderState: () => {
     const { fetchMenuItems } = get();
-    
+
     set({
       selectedCustomer: null,
       selectedTable: null,
