@@ -29,14 +29,19 @@ export function RouteGuard({ children }: RouteGuardProps) {
     );
   }
 
+  const done = localStorage.getItem("ury_onboarding_done") === "true";
   const isSetupRoute = location.pathname === '/setup';
 
-  if (needsOnboarding && !isSetupRoute) {
+  if (!done && needsOnboarding && !isSetupRoute) {
     return <Navigate to="/setup" replace />;
   }
 
+  if (done && isSetupRoute) {
+    return <Navigate to="/admin" replace />;
+  }
+  
   if (!needsOnboarding && isSetupRoute) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/admin" replace />;
   }
 
   return <>{children}</>;

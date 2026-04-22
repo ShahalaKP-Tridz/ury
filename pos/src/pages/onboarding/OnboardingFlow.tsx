@@ -33,7 +33,7 @@ const OnboardingFlow: React.FC = () => {
   const [onboardingData, setOnboardingData] = useState<any>(() => {
     const savedData = localStorage.getItem(ONBOARDING_DATA_KEY);
     if (!savedData) return INITIAL_FORM;
-    
+
     try {
       return JSON.parse(savedData);
     } catch (e) {
@@ -42,7 +42,7 @@ const OnboardingFlow: React.FC = () => {
       return INITIAL_FORM;
     }
   });
-  
+
   const { completeOnboarding } = usePOSStore();
   const navigate = useNavigate();
   const isHydrated = React.useRef(false);
@@ -92,14 +92,16 @@ const OnboardingFlow: React.FC = () => {
     localStorage.removeItem(ONBOARDING_DATA_KEY);
     // 3. Call store to update state
     await completeOnboarding();
-    navigate('/pos');
+    
+    showToast.success("Setup completed successfully!");
+    setTimeout(() => navigate('/admin'), 500);
   }, [completeOnboarding, navigate]);
 
   const handleNext = useCallback((data?: any) => {
     // Prevent "Circular structure to JSON" error if a DOM/React event is passed
     const isEvent = data && (data.nativeEvent || data instanceof Event || (data.target && data.type));
     const payload = isEvent ? {} : (data || {});
-    
+
     // Merge data instead of replacing
     setOnboardingData((prev: any) => ({ ...prev, ...payload }));
 

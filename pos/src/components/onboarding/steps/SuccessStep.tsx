@@ -23,7 +23,7 @@ export const SuccessStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
       </div>
 
       <div className="space-y-4">
-        <Button 
+        <Button
           onClick={() => onNext()}
           size="lg"
           className="w-full font-bold text-base rounded-lg"

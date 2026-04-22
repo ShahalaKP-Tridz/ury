@@ -29,10 +29,13 @@ export const WelcomeStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
 
         {/* Top logo */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg">
-            <span className="text-primary font-extrabold text-xl">U</span>
+          <div className="bg-white rounded-lg p-2 shadow-lg flex items-center justify-center">
+            <img 
+              src="/assets/ury/pos/ury_pos.png" 
+              alt="URY POS" 
+              className="h-8 w-auto object-contain"
+            />
           </div>
-          <span className="text-white font-bold text-xl">URY</span>
           <span className="ml-1 text-xs bg-white/15 text-white/90 px-2 py-0.5 rounded-full border border-white/20">
             Restaurant ERP
           </span>
@@ -66,7 +69,7 @@ export const WelcomeStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
           <div className="flex -space-x-2">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="w-8 h-8 rounded-full border-2 border-primary-900 bg-primary-700 flex items-center justify-center text-[0.625rem] font-bold text-white">
-                {["AM", "BR", "CN", "DX"][i-1]}
+                {["AM", "BR", "CN", "DX"][i - 1]}
               </div>
             ))}
           </div>
@@ -85,10 +88,11 @@ export const WelcomeStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-10 lg:hidden">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-extrabold text-xl">U</span>
-            </div>
-            <span className="text-slate-900 font-bold text-xl">URY</span>
+            <img 
+              src="/assets/ury/pos/ury_pos.png" 
+              alt="URY POS" 
+              className="h-10 w-auto object-contain"
+            />
           </div>
 
           <div>
