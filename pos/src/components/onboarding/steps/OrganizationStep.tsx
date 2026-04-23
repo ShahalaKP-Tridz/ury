@@ -369,7 +369,7 @@ export const OrganizationStep: React.FC<{ onNext: (data: any) => void; onBack: (
                 </p>
                 <div className="mt-auto">
                   <span className="inline-flex px-3 py-1 bg-primary-50 text-primary-700 text-[11px] font-bold uppercase tracking-wider rounded-lg">
-                    Recommended
+                    recommended for QSR, cafes and small restaurants
                   </span>
                 </div>
               </div>
@@ -397,7 +397,7 @@ export const OrganizationStep: React.FC<{ onNext: (data: any) => void; onBack: (
                 </p>
                 <div className="mt-auto">
                   <span className="inline-flex px-3 py-1 bg-gray-100 text-gray-500 text-[11px] font-bold uppercase tracking-wider rounded-lg">
-                    For experienced users
+                    for large restaurants
                   </span>
                 </div>
               </div>
