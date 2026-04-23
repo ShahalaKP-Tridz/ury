@@ -1,4 +1,4 @@
-import api from './api-client';
+// import api from './api-client';
 
 export interface SetupResult {
   success: boolean;
@@ -6,73 +6,118 @@ export interface SetupResult {
   data?: any;
 }
 
+// Helper to simulate API delay and success
+const mockSuccess = async (data: any = {}): Promise<SetupResult> => {
+  await new Promise(resolve => setTimeout(resolve, 800));
+  return { success: true, data };
+};
+
 export const onboardingApi = {
   // STEP 1: ORGANIZATION SETUP
   setupOrganization: async (data: any): Promise<SetupResult> => {
-    return api.post('ury.setup.api.setup_organization', data);
+    console.log('Mock setupOrganization:', data);
+    return mockSuccess({ company: data.company_name });
   },
 
   // STEP 2: MENU UPLOAD + SETUP
   uploadMenuCSV: async (file: File): Promise<any> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return api.post('ury.setup.api.upload_menu_csv', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    console.log('Mock uploadMenuCSV:', file.name);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { success: true, message: 'File uploaded successfully' };
   },
 
   setupMenu: async (data: { items: any[]; tax_calculation: string }): Promise<SetupResult> => {
-    return api.post('ury.setup.api.setup_menu', data);
+    console.log('Mock setupMenu:', data);
+    return mockSuccess();
   },
 
   // STEP 3: PRINTER SETUP
   setupPrinter: async (data: { printer_name: string; server_ip: string; port: string; bill: boolean }): Promise<SetupResult> => {
-    return api.post('ury.setup.api.setup_printer', data);
+    console.log('Mock setupPrinter:', data);
+    return mockSuccess();
   },
 
   // STEP 4: ROOM SETUP
   getRoomContext: async (): Promise<any> => {
-    return api.get('ury.setup.api.get_ury_room_context');
+    return [
+      { name: 'Main Hall', table_count: 10 },
+      { name: 'Terrace', table_count: 5 }
+    ];
   },
 
   setupRoom: async (data: any): Promise<SetupResult> => {
-    return api.post('ury.setup.api.setup_ury_room', data);
+    console.log('Mock setupRoom:', data);
+    return mockSuccess();
   },
 
   // STEP 5: TABLE SETUP
   getTableContext: async (): Promise<any> => {
-    return api.get('ury.setup.api.get_ury_table_context');
+    return {
+      rooms: ['Main Hall', 'Terrace'],
+      existing_tables: []
+    };
   },
 
   setupTable: async (data: any): Promise<SetupResult> => {
-    return api.post('ury.setup.api.setup_ury_table', data);
+    console.log('Mock setupTable:', data);
+    return mockSuccess();
   },
 
   // STEP 6: MODE OF PAYMENT
   getMopContext: async (): Promise<any> => {
-    return api.get('ury.setup.api.get_mop_context');
+    return [
+      { name: 'Cash', type: 'Cash' },
+      { name: 'Card', type: 'Bank' },
+      { name: 'UPI', type: 'Bank' }
+    ];
   },
 
   setupMop: async (data: any): Promise<SetupResult> => {
-    return api.post('ury.setup.api.setup_mop', data);
+    console.log('Mock setupMop:', data);
+    return mockSuccess();
   },
 
-  // STEP 7: BRANCH & RESTAURANT
-  getBranchRestaurantContext: async (): Promise<any> => {
-    return api.get('ury.setup.api.get_branch_restaurant_context');
+  // STEP 7: BRANCH
+  getBranchContext: async (): Promise<any> => {
+    return {
+      branch_name: 'Main Branch',
+      branch_phone: '',
+      branch_email: '',
+      branch_address: ''
+    };
   },
 
-  setupBranchRestaurant: async (data: any): Promise<SetupResult> => {
-    return api.post('ury.setup.api.setup_branch_restaurant', data);
+  setupBranch: async (data: any): Promise<SetupResult> => {
+    console.log('Mock setupBranch:', data);
+    return mockSuccess();
   },
 
-  // STEP 8: USER MANAGEMENT (FINAL STEP)
+  // STEP 8: RESTAURANT
+  getRestaurantContext: async (): Promise<any> => {
+    return {
+      restaurant_name: 'URY Kitchen',
+      tagline: ''
+    };
+  },
+
+  setupRestaurant: async (data: any): Promise<SetupResult> => {
+    console.log('Mock setupRestaurant:', data);
+    return mockSuccess();
+  },
+
+
+  // STEP 9: USER MANAGEMENT (FINAL STEP)
   getUserManagementContext: async (): Promise<any> => {
-    return api.get('ury.setup.api.get_user_management_context');
+    return {
+      roles: ['Cashier', 'Manager', 'Admin'],
+      existing_users: []
+    };
   },
 
   setupUserManagement: async (data: any): Promise<SetupResult> => {
+    console.log('Mock setupUserManagement:', data);
     // This step includes finish_setup: 1 to lock onboarding
-    return api.post('ury.setup.api.setup_user_management', { ...data, finish_setup: 1 });
+    return mockSuccess();
   },
 };
+

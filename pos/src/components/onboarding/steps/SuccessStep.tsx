@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { CheckCircle2, MonitorSmartphone, LayoutDashboard, Sparkles } from "lucide-react";
+import { CheckCircle2, LayoutDashboard, Sparkles } from "lucide-react";
 import type { OnboardingStepProps } from "../../../pages/onboarding/steps";
 
 export function SuccessStep({ onNext }: OnboardingStepProps) {
@@ -48,7 +48,7 @@ export function SuccessStep({ onNext }: OnboardingStepProps) {
           >
             {[
               { icon: <Sparkles className="w-4 h-4" />, label: "System Ready" },
-              { icon: <MonitorSmartphone className="w-4 h-4" />, label: "POS Active" },
+              { icon: <LayoutDashboard className="w-4 h-4" />, label: "POS Active" },
               { icon: <LayoutDashboard className="w-4 h-4" />, label: "Dashboard Live" },
             ].map((item) => (
               <div
@@ -68,18 +68,10 @@ export function SuccessStep({ onNext }: OnboardingStepProps) {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.55 }}
-            className="flex flex-col sm:flex-row gap-3"
           >
             <button
               onClick={() => onNext()}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors font-medium shadow-sm shadow-primary-200"
-            >
-              <MonitorSmartphone className="w-4 h-4" />
-              Go to POS
-            </button>
-            <button
-              onClick={() => window.location.href = '/admin'}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border-2 border-border text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors font-medium shadow-sm shadow-primary-200"
             >
               <LayoutDashboard className="w-4 h-4" />
               Go to Dashboard

@@ -1,155 +1,244 @@
 import React, { useState, useRef } from 'react';
-import { Utensils, Loader2, Upload, Trash2, Check, FileSpreadsheet, Calculator } from 'lucide-react';
+import { Loader2, Upload, Trash2, Check, Plus } from 'lucide-react';
 import { Button } from '../../../ui/button';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useOnboardingStore } from '../../../../store/onboarding-store';
-import { onboardingApi } from '../../../../lib/onboarding-api';
 import { showToast } from '../../../ui/toast';
+
+interface RowItem {
+  item_name: string;
+  standard_rate: string;
+}
+
+const emptyRow = (): RowItem => ({ item_name: '', standard_rate: '' });
+const DEFAULT_ROWS = 3;
 
 export const MenuStep: React.FC = () => {
   const { menu, updateData } = useOnboardingStore();
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Editable rows — initialise from store or show 3 empty rows
+  const [rows, setRows] = useState<RowItem[]>(() => {
+    if (menu.items && menu.items.length > 0) {
+      return menu.items.map((it: any) => ({
+        item_name: it.item_name || it.name || '',
+        standard_rate: String(it.standard_rate || it.price || ''),
+      }));
+    }
+    return Array.from({ length: DEFAULT_ROWS }, emptyRow);
+  });
+
+  /* ── helpers ── */
+  const updateRow = (i: number, field: keyof RowItem, value: string) => {
+    setRows((prev) => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
+  };
+
+  const addRow = () => setRows((prev) => [...prev, emptyRow()]);
+
+  const removeRow = (i: number) => {
+    setRows((prev) => {
+      const next = prev.filter((_, idx) => idx !== i);
+      return next.length === 0 ? [emptyRow()] : next;
+    });
+  };
+
+  /* ── Upload: parse CSV client-side, populate rows directly ── */
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setIsUploading(true);
-    try {
-      const response = await onboardingApi.uploadMenuCSV(file);
-      if (response.items) {
-        updateData('menu', { items: response.items });
-        showToast.success('Menu imported successfully');
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const text = evt.target?.result as string;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) { showToast.error('File must have a header row and at least one item'); return; }
+
+        // Parse header — support flexible column names
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+        const nameIdx   = headers.findIndex(h => h === 'item_name' || h === 'name');
+        const priceIdx  = headers.findIndex(h => h === 'standard_rate' || h === 'price' || h === 'rate');
+
+        if (nameIdx === -1) { showToast.error('CSV must have an "item_name" or "name" column'); return; }
+
+        const imported: RowItem[] = lines.slice(1)
+          .map(line => {
+            const cols = line.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+            return {
+              item_name: cols[nameIdx] ?? '',
+              standard_rate: priceIdx !== -1 ? (cols[priceIdx] ?? '') : '',
+            };
+          })
+          .filter(r => r.item_name);
+
+        if (imported.length === 0) { showToast.error('No valid items found in file'); return; }
+
+        const existing = rows.filter(r => r.item_name.trim() || r.standard_rate.trim());
+        const merged = [...existing, ...imported];
+        setRows(merged);
+        showToast.success(`${imported.length} item${imported.length !== 1 ? 's' : ''} imported`);
+      } catch {
+        showToast.error('Failed to parse file — check the format');
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
       }
-    } catch (error: any) {
-      showToast.error(error.message || 'Failed to upload CSV');
-    } finally {
+    };
+    reader.onerror = () => {
+      showToast.error('Could not read file');
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    };
+    reader.readAsText(file);
   };
 
-  const removeItem = (index: number) => {
-    const newItems = [...menu.items];
-    newItems.splice(index, 1);
-    updateData('menu', { items: newItems });
+  /* ── Save valid rows to store ── */
+  const handleSave = () => {
+    const valid = rows.filter(r => r.item_name.trim() && Number(r.standard_rate) > 0);
+    if (valid.length === 0) { showToast.error('Add at least one item with a valid price'); return; }
+    updateData('menu', { items: valid });
+    showToast.success(`${valid.length} items saved`);
   };
+
+  const filledCount = rows.filter(r => r.item_name.trim()).length;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row gap-6">
-        {/* Upload Section */}
-        <div className="flex-1 p-8 bg-card border-2 border-dashed border-border rounded-3xl flex flex-col items-center justify-center text-center transition-all hover:border-primary/50 group">
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform">
-            <Upload className="w-8 h-8" />
-          </div>
-          <h4 className="font-bold text-foreground">Import Menu from CSV</h4>
-          <p className="text-xs text-muted-foreground mt-1 mb-6 max-w-[200px]">
-            Upload your existing menu catalog to save time
-          </p>
-          <input
-            type="file"
-            accept=".csv"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-          />
-          <Button 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="rounded-xl font-bold px-8"
-          >
-            {isUploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileSpreadsheet className="w-4 h-4 mr-2" />}
-            {isUploading ? 'Uploading...' : 'Choose File'}
-          </Button>
-        </div>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl">
 
-        {/* Tax Configuration */}
-        <div className="w-full sm:w-[300px] p-8 bg-secondary/20 rounded-3xl border border-border/50 flex flex-col">
-          <div className="w-12 h-12 bg-foreground/5 rounded-xl flex items-center justify-center text-foreground mb-4">
-            <Calculator className="w-6 h-6" />
+      {/* ── Top action bar ── */}
+      <div className="flex items-center gap-3">
+        <Button
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="rounded-xl h-10 px-5 font-bold gap-2 text-sm"
+        >
+          {isUploading
+            ? <Loader2 className="w-4 h-4 animate-spin" />
+            : <Upload className="w-4 h-4" />}
+          {isUploading ? 'Importing...' : 'Upload CSV'}
+        </Button>
+        <input type="file" accept=".csv,.xlsx,.xls" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+
+      </div>
+
+      {/* ── Tax Configuration ── */}
+      <div className="p-5 bg-card border border-border rounded-2xl">
+        <p className="font-bold text-sm text-foreground mb-4">Tax Configuration</p>
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          {/* Tax Rate input */}
+          <div className="flex-shrink-0">
+            <label className="block text-xs text-muted-foreground mb-1.5">Tax Rate (%)</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              placeholder="5"
+              value={menu.tax_rate ?? ''}
+              onChange={(e) => updateData('menu', { tax_rate: e.target.value })}
+              className="w-28 h-11 px-4 rounded-xl border border-border bg-background text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+            />
           </div>
-          <h4 className="font-bold text-foreground">Tax Calculation</h4>
-          <p className="text-xs text-muted-foreground mt-1 mb-6">
-            How should taxes be applied to your prices?
-          </p>
-          
-          <div className="space-y-2 mt-auto">
-            {['Inclusive', 'Exclusive'].map((mode) => (
-              <button
-                key={mode}
-                onClick={() => updateData('menu', { tax_calculation: mode })}
-                className={`w-full p-4 rounded-xl text-sm font-bold flex items-center justify-between transition-all ${
-                  menu.tax_calculation === mode 
-                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' 
-                    : 'bg-card text-muted-foreground border border-border hover:bg-secondary'
-                }`}
-              >
-                <span>{mode}</span>
-                {menu.tax_calculation === mode && <Check className="w-4 h-4" />}
-              </button>
-            ))}
+
+          {/* Radio-style option cards */}
+          <div className="flex gap-3">
+            {[
+              { value: 'Inclusive', subtitle: 'Tax within price' },
+              { value: 'Exclusive', subtitle: 'Tax added on top' },
+            ].map(({ value, subtitle }) => {
+              const selected = menu.tax_calculation === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => updateData('menu', { tax_calculation: value })}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-150 text-left ${
+                    selected
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border bg-background hover:border-primary/40'
+                  }`}
+                >
+                  {/* Radio dot */}
+                  <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                    selected ? 'border-primary' : 'border-muted-foreground/40'
+                  }`}>
+                    {selected && <span className="w-2 h-2 rounded-full bg-primary" />}
+                  </span>
+                  <span>
+                    <span className={`block text-sm font-bold ${ selected ? 'text-primary' : 'text-foreground' }`}>{value}</span>
+                    <span className="block text-[10px] text-muted-foreground">{subtitle}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Preview Table */}
-      <AnimatePresence>
-        {menu.items.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-card border border-border rounded-3xl overflow-hidden"
-          >
-            <div className="p-6 border-b border-border flex items-center justify-between bg-muted/30">
-              <h4 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Preview: {menu.items.length} Items</h4>
-              <Button variant="ghost" size="sm" onClick={() => updateData('menu', { items: [] })} className="text-destructive hover:bg-destructive/10 h-8 font-bold">
-                Clear All
-              </Button>
-            </div>
-            <div className="overflow-x-auto max-h-[400px] custom-scrollbar">
-              <table className="w-full text-left border-collapse">
-                <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-sm">
-                  <tr>
-                    <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Item Name</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Category</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Price</th>
-                    <th className="px-6 py-4 text-right"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {menu.items.map((item, i) => (
-                    <tr key={i} className="group hover:bg-secondary/30 transition-colors">
-                      <td className="px-6 py-4 text-sm font-bold text-foreground">{item.item_name || item.name}</td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
-                        <span className="bg-secondary px-2 py-1 rounded-lg font-bold text-[10px] uppercase">{item.item_group || item.category}</span>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-bold text-primary">₹{item.standard_rate || item.price}</td>
-                      <td className="px-6 py-4 text-right">
-                        <button 
-                          onClick={() => removeItem(i)}
-                          className="p-2 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-destructive rounded-lg transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {!menu.items.length && (
-        <div className="py-12 flex flex-col items-center justify-center text-center opacity-30">
-          <Utensils className="w-12 h-12 mb-4" />
-          <p className="text-sm font-medium">No items added yet</p>
+      {/* ── Editable rows table ── */}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        {/* Header */}
+        <div className="grid grid-cols-[1.8fr_1fr_40px] gap-3 px-5 py-3 bg-muted/30 border-b border-border">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Item Name</span>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Price (₹)</span>
+          <span />
         </div>
-      )}
+
+        {/* Rows */}
+        <div className="divide-y divide-border/50 max-h-[480px] overflow-y-auto custom-scrollbar">
+          {rows.map((row, i) => (
+            <div key={i} className="grid grid-cols-[1.8fr_1fr_40px] gap-3 items-center px-4 py-2.5">
+              <input
+                type="text"
+                placeholder={`Item ${i + 1}`}
+                value={row.item_name}
+                onChange={(e) => updateRow(i, 'item_name', e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border border-transparent bg-secondary/40 text-sm font-medium text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/40 focus:bg-background transition"
+              />
+              <input
+                type="number"
+                min="0"
+                placeholder="0.00"
+                value={row.standard_rate}
+                onChange={(e) => updateRow(i, 'standard_rate', e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border border-transparent bg-secondary/40 text-sm font-medium text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/40 focus:bg-background transition"
+              />
+              <button
+                onClick={() => removeRow(i)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer: Add row + Save */}
+        <div className="px-4 py-3 border-t border-border bg-muted/10 flex items-center justify-between gap-3">
+          <button
+            onClick={addRow}
+            className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add row
+          </button>
+
+          <div className="flex items-center gap-3">
+            {filledCount > 0 && (
+              <span className="text-[10px] font-bold text-muted-foreground">
+                {filledCount} item{filledCount !== 1 ? 's' : ''} filled
+              </span>
+            )}
+            <Button onClick={handleSave} size="sm" className="rounded-xl h-8 px-5 font-bold gap-1.5 text-xs">
+              <Check className="w-3.5 h-3.5" />
+              Save Items
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[11px] text-muted-foreground opacity-50 text-center">
+        Upload a CSV or type items directly. Empty rows are ignored on save.
+      </p>
     </div>
   );
 };
