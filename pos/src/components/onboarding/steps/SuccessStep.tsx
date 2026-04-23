@@ -1,40 +1,102 @@
-import React from 'react';
-import { CheckCircle2, PartyPopper, ArrowRight } from 'lucide-react';
-import { Button } from '../../ui/button';
-import type { OnboardingStepProps } from '../../../pages/onboarding/steps';
+import { motion } from "motion/react";
+import { CheckCircle2, MonitorSmartphone, LayoutDashboard, Sparkles } from "lucide-react";
+import type { OnboardingStepProps } from "../../../pages/onboarding/steps";
 
-export const SuccessStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
+export function SuccessStep({ onNext }: OnboardingStepProps) {
   return (
-    <div className="w-full max-w-xl bg-white rounded-lg p-12 md:p-16 shadow-xl border border-gray-100 text-center font-inter">
-      <div className="mb-10 flex justify-center">
-        <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center relative">
-          <CheckCircle2 className="w-12 h-12 text-emerald-600" />
-          <div className="absolute -top-2 -right-2">
-            <PartyPopper className="w-8 h-8 text-primary" />
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary-50 to-primary-100/50 flex items-center justify-center px-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="max-w-lg w-full"
+      >
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
+          {/* Icon */}
+          <motion.div
+            initial={{ scale: 0, rotate: -20 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 16 }}
+            className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary-400 to-primary-600 rounded-2xl mb-6 shadow-lg shadow-primary-200"
+          >
+            <CheckCircle2 className="w-10 h-10 text-white" />
+          </motion.div>
+
+          {/* Title */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+          >
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <h1 className="text-gray-900" style={{ fontSize: "1.875rem", fontWeight: 700 }}>
+                Setup Complete
+              </h1>
+              <span style={{ fontSize: "1.75rem" }}>🎉</span>
+            </div>
+            <p className="text-gray-500 mb-2" style={{ fontSize: "0.9375rem" }}>
+              Your <span className="font-semibold text-primary-600">URY</span> restaurant system is ready to use.
+            </p>
+          </motion.div>
+
+          {/* Feature highlights */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+            className="grid grid-cols-3 gap-3 my-7"
+          >
+            {[
+              { icon: <Sparkles className="w-4 h-4" />, label: "System Ready" },
+              { icon: <MonitorSmartphone className="w-4 h-4" />, label: "POS Active" },
+              { icon: <LayoutDashboard className="w-4 h-4" />, label: "Dashboard Live" },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="bg-primary-50 rounded-xl p-3 flex flex-col items-center gap-1.5"
+              >
+                <div className="text-primary-600">{item.icon}</div>
+                <span className="text-primary-700" style={{ fontSize: "0.75rem", fontWeight: 500 }}>
+                  {item.label}
+                </span>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* Actions */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.55 }}
+            className="flex flex-col sm:flex-row gap-3"
+          >
+            <button
+              onClick={() => onNext()}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors font-medium shadow-sm shadow-primary-200"
+            >
+              <MonitorSmartphone className="w-4 h-4" />
+              Go to POS
+            </button>
+            <button
+              onClick={() => window.location.href = '/admin'}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border-2 border-border text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Go to Dashboard
+            </button>
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="text-gray-400 mt-5"
+            style={{ fontSize: "0.8125rem" }}
+          >
+            You can configure more settings anytime from your dashboard
+          </motion.p>
         </div>
-      </div>
-
-      <div className="mb-12">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">You're all set!</h2>
-        <p className="text-gray-500 font-medium text-base">
-          Your POS environment has been successfully configured. You can now start managing your business.
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        <Button
-          onClick={() => onNext()}
-          size="lg"
-          className="w-full font-bold text-base rounded-lg"
-        >
-          Launch POS Dashboard
-          <ArrowRight className="w-5 h-5 ml-2.5" />
-        </Button>
-        <p className="text-xs text-gray-400 font-medium">
-          Need to change something? You can always update settings in the Admin Panel.
-        </p>
-      </div>
+      </motion.div>
     </div>
   );
-};
+}

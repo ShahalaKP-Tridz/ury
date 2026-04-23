@@ -1,10 +1,4 @@
-import { call } from './frappe-sdk';
-
-const STORAGE_KEY = 'ury_onboarding_done';
-
-export interface SetupStatus {
-  needsOnboarding: boolean;
-}
+import api from './api-client';
 
 export interface SetupResult {
   success: boolean;
@@ -13,75 +7,72 @@ export interface SetupResult {
 }
 
 export const onboardingApi = {
-  /**
-   * Check whether the system needs first-time onboarding.
-   */
-  checkSetupStatus: async (): Promise<SetupStatus> => {
-    try {
-      // First check localStorage for a fast UI-only bypass
-      const isDone = localStorage.getItem(STORAGE_KEY);
-      if (isDone === 'true') return { needsOnboarding: false };
-
-      // Then verify with backend
-      const response = await call.post('ury.ury.api.onboarding.check_setup_status', {});
-      return { needsOnboarding: response.message.needsOnboarding };
-    } catch (error) {
-      console.error('Failed to check setup status:', error);
-      // Fallback to true if we can't reach backend during first init
-      return { needsOnboarding: true };
-    }
+  // STEP 1: ORGANIZATION SETUP
+  setupOrganization: async (data: any): Promise<SetupResult> => {
+    return api.post('ury.setup.api.setup_organization', data);
   },
 
-  /**
-   * Persist organisation details.
-   */
-  setupOrganization: async (data: Record<string, unknown>): Promise<SetupResult> => {
-    try {
-      const response = await call.post('ury.ury.api.onboarding.setup_organization', { data });
-      return { 
-        success: response.message.success,
-        data: response.message
-      };
-    } catch (error: any) {
-      console.warn('Backend setup_organization failed, falling back to mock success for UI testing');
-      // Simulate a small delay for realistic UX
-      await new Promise(resolve => setTimeout(resolve, 800));
-      return { 
-        success: true, 
-        message: 'Using simulated success (Backend unconfigured)',
-        data: { ...data, company: data.companyName }
-      };
-    }
+  // STEP 2: MENU UPLOAD + SETUP
+  uploadMenuCSV: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('ury.setup.api.upload_menu_csv', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
   },
 
-  /**
-   * Finalise the workspace setup (Branch, Restaurant, Rooms, Tables, etc.)
-   */
-  setupWorkspace: async (data: Record<string, unknown>): Promise<SetupResult> => {
-    try {
-      const response = await call.post('ury.ury.api.onboarding.setup_workspace', { data });
-      return { 
-        success: response.message.success,
-        data: response.message
-      };
-    } catch (error: any) {
-      console.warn('Backend setup_workspace failed, falling back to mock success for UI testing');
-      // Simulate a realistic processing delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      return { 
-        success: true, 
-        message: 'Using simulated success (Backend unconfigured)',
-        data: data
-      };
-    }
+  setupMenu: async (data: { items: any[]; tax_calculation: string }): Promise<SetupResult> => {
+    return api.post('ury.setup.api.setup_menu', data);
   },
 
-  /**
-   * Mark onboarding as complete.
-   */
-  completeOnboarding: async (): Promise<SetupResult> => {
-    localStorage.setItem(STORAGE_KEY, 'true');
-    return { success: true };
+  // STEP 3: PRINTER SETUP
+  setupPrinter: async (data: { printer_name: string; server_ip: string; port: string; bill: boolean }): Promise<SetupResult> => {
+    return api.post('ury.setup.api.setup_printer', data);
+  },
+
+  // STEP 4: ROOM SETUP
+  getRoomContext: async (): Promise<any> => {
+    return api.get('ury.setup.api.get_ury_room_context');
+  },
+
+  setupRoom: async (data: any): Promise<SetupResult> => {
+    return api.post('ury.setup.api.setup_ury_room', data);
+  },
+
+  // STEP 5: TABLE SETUP
+  getTableContext: async (): Promise<any> => {
+    return api.get('ury.setup.api.get_ury_table_context');
+  },
+
+  setupTable: async (data: any): Promise<SetupResult> => {
+    return api.post('ury.setup.api.setup_ury_table', data);
+  },
+
+  // STEP 6: MODE OF PAYMENT
+  getMopContext: async (): Promise<any> => {
+    return api.get('ury.setup.api.get_mop_context');
+  },
+
+  setupMop: async (data: any): Promise<SetupResult> => {
+    return api.post('ury.setup.api.setup_mop', data);
+  },
+
+  // STEP 7: BRANCH & RESTAURANT
+  getBranchRestaurantContext: async (): Promise<any> => {
+    return api.get('ury.setup.api.get_branch_restaurant_context');
+  },
+
+  setupBranchRestaurant: async (data: any): Promise<SetupResult> => {
+    return api.post('ury.setup.api.setup_branch_restaurant', data);
+  },
+
+  // STEP 8: USER MANAGEMENT (FINAL STEP)
+  getUserManagementContext: async (): Promise<any> => {
+    return api.get('ury.setup.api.get_user_management_context');
+  },
+
+  setupUserManagement: async (data: any): Promise<SetupResult> => {
+    // This step includes finish_setup: 1 to lock onboarding
+    return api.post('ury.setup.api.setup_user_management', { ...data, finish_setup: 1 });
   },
 };
-
