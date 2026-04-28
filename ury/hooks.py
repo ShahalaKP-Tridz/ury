@@ -61,7 +61,7 @@ website_route_rules = [
 # ----------
 
 # application home page (will override Website Settings)
-# home_page = "login"
+home_page = "pos"
 
 # website user home page (by Role)
 # role_home_page = {
